@@ -1,0 +1,797 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Stats TikTok</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%231c1b19'/%3E%3Cpath d='M12 9l11 7-11 7z' fill='%23f4f2ec'/%3E%3C/svg%3E">
+<style>
+/* Mêmes couleurs et typo que l'Espace privé ESIRPRAC (prive/public/style.css) */
+:root{
+  color-scheme:light;
+  --paper:#f4f2ec;--sheet:#fffefb;--sheet-2:#f8f6f1;--ink:#1c1b19;--ink-2:#55524b;--muted:#878379;
+  --rule:#e4e0d6;--rule-strong:#cdc8bb;--pen:#2446c8;--pen-hover:#1c389f;--pen-ink:#fff;--pen-soft:#eaeefc;
+  --ok:#1f8a4c;--ok-soft:#e6f4ec;--bad:#c2352b;--bad-soft:#fbeceb;--warn:#9a5b00;--warn-soft:#fcf2da;
+  --shadow:0 1px 2px rgba(28,27,25,.05),0 10px 30px -18px rgba(28,27,25,.25);
+  --serif:"Source Serif 4","Iowan Old Style","Palatino Linotype",Georgia,serif;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  /* séries (palette validée : ordre fixe, une couleur suit un post, jamais son rang) */
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#008300;
+  --grid:#ebe8df;--axis:#cdc8bb;
+  --h0:#f3f1ea;--h1:#cde2fb;--h2:#9ec5f4;--h3:#6da7ec;--h4:#3987e5;--h5:#256abf;--h6:#184f95;--h7:#0d366b;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --paper:#121211;--sheet:#1b1b19;--sheet-2:#222220;--ink:#f1eee7;--ink-2:#c3bfb5;--muted:#8f8b82;
+    --rule:#2e2d2a;--rule-strong:#45433e;--pen:#7d97ff;--pen-hover:#9badff;--pen-ink:#0f1430;--pen-soft:#1e2546;
+    --ok:#5cc98a;--ok-soft:#173023;--bad:#ef7a70;--bad-soft:#3a1d1a;--warn:#e3a94a;--warn-soft:#352812;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -18px rgba(0,0,0,.6);
+    --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;
+    --grid:#2a2927;--axis:#45433e;
+    --h0:#232321;--h1:#13294a;--h2:#184f95;--h3:#1c5cab;--h4:#2a78d6;--h5:#3987e5;--h6:#6da7ec;--h7:#9ec5f4;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --paper:#121211;--sheet:#1b1b19;--sheet-2:#222220;--ink:#f1eee7;--ink-2:#c3bfb5;--muted:#8f8b82;
+  --rule:#2e2d2a;--rule-strong:#45433e;--pen:#7d97ff;--pen-hover:#9badff;--pen-ink:#0f1430;--pen-soft:#1e2546;
+  --ok:#5cc98a;--ok-soft:#173023;--bad:#ef7a70;--bad-soft:#3a1d1a;--warn:#e3a94a;--warn-soft:#352812;
+  --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px -18px rgba(0,0,0,.6);
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;
+  --grid:#2a2927;--axis:#45433e;
+  --h0:#232321;--h1:#13294a;--h2:#184f95;--h3:#1c5cab;--h4:#2a78d6;--h5:#3987e5;--h6:#6da7ec;--h7:#9ec5f4;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.55 var(--sans)}
+a{color:var(--pen)}
+button,select,input{font:inherit;color:inherit}
+.topbar{position:sticky;top:0;z-index:20;height:60px;display:flex;align-items:center;gap:12px;padding:0 28px;border-bottom:1px solid var(--rule);background:var(--sheet)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--ink)}
+.brand-mark{width:32px;height:32px;border-radius:9px;display:grid;place-items:center;background:var(--ink);color:var(--paper);font-weight:700;font-size:14px}
+.brand strong{display:block;font-size:15px}.brand small{display:block;font-size:12px;color:var(--muted)}
+.top-nav{display:flex;gap:4px;margin-left:12px}
+.top-nav a{padding:6px 12px;border-radius:999px;text-decoration:none;color:var(--ink-2);font-weight:600;font-size:14px}
+.top-nav a:hover{background:var(--sheet-2)}
+.sp{flex:1}
+main{max-width:1180px;margin:36px auto 64px;padding:0 28px}
+section{margin-top:34px;scroll-margin-top:80px}
+.eyebrow{margin:0 0 8px;font:600 12px/1 var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font:600 34px/1.15 var(--serif);margin:0 0 10px;letter-spacing:-.01em}
+h2{font:600 21px/1.25 var(--serif);margin:0 0 4px}
+h3{font:600 15px/1.3 var(--sans);margin:0 0 10px}
+.lede{color:var(--ink-2);max-width:700px;margin:0}
+.sub{color:var(--muted);margin:0 0 14px;font-size:14px}
+.card{background:var(--sheet);border:1px solid var(--rule);border-radius:16px;box-shadow:var(--shadow);padding:22px}
+.btn{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:10px;border:1px solid var(--rule-strong);background:var(--sheet);color:var(--ink);font-weight:600;font-size:14px;cursor:pointer;text-decoration:none;white-space:nowrap}
+.btn:hover{border-color:var(--ink-2)}
+.btn-primary{background:var(--pen);border-color:var(--pen);color:var(--pen-ink)}
+.btn-primary:hover{background:var(--pen-hover);border-color:var(--pen-hover)}
+.btn:disabled{opacity:.55;cursor:default}
+.sel{height:36px;border-radius:10px;border:1px solid var(--rule-strong);background:var(--sheet);padding:0 10px;font-size:14px;font-weight:600}
+.icon-btn{width:36px;height:36px;border-radius:10px;border:1px solid var(--rule);background:var(--sheet);display:grid;place-items:center;cursor:pointer}
+.muted{color:var(--muted)}
+.note{border-radius:12px;padding:12px 14px;background:var(--warn-soft);color:var(--warn)}
+.note.bad{background:var(--bad-soft);color:var(--bad)}
+.note.ok{background:var(--ok-soft);color:var(--ok)}
+.head-row{display:flex;align-items:flex-end;gap:18px;flex-wrap:wrap;justify-content:space-between}
+.tools{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+
+/* tuiles chiffres */
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:14px;margin-top:24px}
+.kpi{padding:18px 20px}
+.kpi .k{font-size:13px;color:var(--muted);font-weight:600}
+.kpi .v{font:600 30px/1.1 var(--serif);margin-top:6px;letter-spacing:-.01em}
+.kpi .d{font-size:13px;color:var(--ink-2);margin-top:4px}
+
+/* encadré « même âge » */
+.compare{margin-top:14px;display:grid;grid-template-columns:1fr;gap:6px}
+.cmp-row{display:grid;grid-template-columns:190px 1fr 90px;align-items:center;gap:12px;font-size:14px}
+.cmp-row .bar{height:12px;border-radius:0 4px 4px 0;background:var(--rule)}
+.cmp-row .bar i{display:block;height:100%;border-radius:0 4px 4px 0}
+.cmp-row b{text-align:right;font-variant-numeric:tabular-nums}
+
+/* tableau des posts */
+.tablewrap{overflow-x:auto;margin:0 -22px;padding:0 22px}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font-size:12px;font-weight:700;color:var(--muted);text-align:right;padding:8px 10px;border-bottom:1px solid var(--rule-strong);white-space:nowrap;cursor:pointer;user-select:none}
+th:first-child,td:first-child{text-align:left}
+th[aria-sort] {color:var(--pen)}
+th[aria-sort="ascending"]::after{content:" ↑"}th[aria-sort="descending"]::after{content:" ↓"}
+td{padding:9px 10px;border-bottom:1px solid var(--rule);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+tbody tr{cursor:pointer}
+tbody tr:hover td{background:var(--sheet-2)}
+tbody tr.on td{background:var(--pen-soft)}
+td .best{display:inline-block;padding:1px 7px;border-radius:7px;background:var(--ok-soft);color:var(--ok);font-weight:700}
+.post-cell{display:flex;align-items:center;gap:10px;min-width:260px;white-space:normal}
+.dot{width:10px;height:10px;border-radius:50%;flex:none;background:var(--rule-strong)}
+.post-cell b{display:block;font-weight:700}
+.post-cell small{display:block;color:var(--muted);font-size:12px;line-height:1.3}
+
+/* graphiques */
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:30px;padding:0 11px;border-radius:999px;border:1px solid var(--rule);background:var(--sheet);font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.chip[aria-pressed="true"]{border-color:var(--rule-strong);color:var(--ink);background:var(--sheet-2)}
+.chip .dot{width:9px;height:9px}
+.chip[aria-pressed="false"] .dot{background:transparent !important;border:1.5px solid var(--rule-strong)}
+.seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:10px;overflow:hidden}
+.seg button{height:32px;padding:0 12px;border:0;background:var(--sheet);font-size:13px;font-weight:600;color:var(--ink-2);cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--pen-soft);color:var(--pen)}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:12px var(--sans);fill:var(--muted)}
+.chart .lbl{font-weight:700;fill:var(--ink-2)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+.three{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.tip{position:fixed;z-index:50;pointer-events:none;background:var(--sheet);border:1px solid var(--rule-strong);border-radius:10px;box-shadow:var(--shadow);padding:9px 11px;font-size:13px;min-width:150px;display:none}
+.tip .t{font-weight:700;margin-bottom:4px}
+.tip .r{display:flex;align-items:center;gap:8px;justify-content:space-between}
+.tip .r span{display:flex;align-items:center;gap:6px;color:var(--ink-2)}
+.tip .r b{font-variant-numeric:tabular-nums}
+
+/* listes d'audience */
+.split{display:grid;gap:7px}
+.split .r{display:grid;grid-template-columns:110px 1fr 48px;align-items:center;gap:10px;font-size:13px}
+.split .r span{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.split .track{height:10px;border-radius:0 4px 4px 0;background:var(--sheet-2)}
+.split .track i{display:block;height:100%;border-radius:0 4px 4px 0;background:var(--s1)}
+.split .r b{text-align:right;font-variant-numeric:tabular-nums}
+
+/* heures actives */
+.heat{display:grid;grid-template-columns:86px repeat(24,1fr);gap:2px;font-size:11px;align-items:center}
+.heat .c{height:22px;border-radius:4px}
+.heat .lab{color:var(--muted);font-weight:600}
+.heat .hh{color:var(--muted);text-align:center}
+.legend-ramp{display:flex;gap:2px;align-items:center;font-size:12px;color:var(--muted);margin-top:10px}
+.legend-ramp i{width:22px;height:10px;border-radius:3px;display:block}
+
+/* prédiction */
+.pred-hero{display:flex;gap:14px;margin-top:18px}
+.pred-hero>div{background:var(--sheet-2);border:1px solid var(--rule);border-radius:14px;padding:16px 18px}
+.pred-main{flex:1.6}.pred-wave{flex:1}
+.pred-hero .k{font-size:13px;color:var(--muted);font-weight:600}
+.pred-hero .big{font:600 44px/1.05 var(--serif);margin-top:6px;color:var(--pen);letter-spacing:-.015em}
+.pred-hero .mid{font:600 28px/1.1 var(--serif);margin-top:6px}
+.pred-hero .d{font-size:13px;color:var(--ink-2);margin-top:6px}
+.pred-why{margin:16px 0 10px;color:var(--ink-2)}
+@media (max-width:900px){.pred-hero{flex-direction:column}}
+
+/* blocs repliés */
+details.more{margin-top:20px;border-top:1px solid var(--rule);padding-top:14px}
+details.more h3{margin-top:24px}
+details summary{cursor:pointer;font-weight:600;color:var(--ink-2)}
+details summary:hover{color:var(--ink)}
+details.fold summary{font:600 18px/1.3 var(--serif);color:var(--ink)}
+
+/* relevé en cours */
+#job{margin-top:18px}
+#job pre{margin:8px 0 0;font:12px/1.5 ui-monospace,Consolas,monospace;white-space:pre-wrap;color:var(--ink-2);max-height:160px;overflow:auto}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite;vertical-align:-2px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:var(--shadow);display:none}
+
+@media (max-width:900px){.two,.three{grid-template-columns:1fr}.top-nav{display:none}}
+@media (max-width:720px){
+  .topbar{padding:0 16px}.brand small{display:none}
+  main{margin-top:24px;padding:0 16px}
+  h1{font-size:28px}.card{padding:16px}.tablewrap{margin:0 -16px;padding:0 16px}
+  .cmp-row{grid-template-columns:120px 1fr 70px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
+</style>
+<style>#accSeg{display:none!important}</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#"><span class="brand-mark" aria-hidden="true">▶</span><div><strong>Stats TikTok</strong><small id="brandSub">ton compte</small></div></a>
+  <nav class="top-nav"><a href="#posts">Posts</a><a href="#courbes">Courbes</a><a href="#retention">Rétention</a><a href="#detail">Détail</a><a href="#compte">Compte</a><a href="#prediction">Prédiction</a></nav>
+  <span class="sp"></span>
+  <div class="seg" id="accSeg" role="group" aria-label="Compte TikTok"><button type="button" data-a="fr" aria-pressed="true">ton compte</button><button type="button" data-a="en" aria-pressed="false">EN · @vocly.en</button></div>
+  <button type="button" class="icon-btn" id="themeBtn" aria-label="Thème"></button>
+</header>
+
+<main>
+  <div class="head-row">
+    <div>
+      <p class="eyebrow">TikTok Studio · lecture seule</p>
+      <h1>Tes stats TikTok</h1>
+      <p class="lede" id="lede">Chargement du dernier relevé…</p>
+    </div>
+    <div class="tools">
+      <select class="sel" id="runSel" aria-label="Relevé affiché"></select>
+      <select class="sel" id="nSel" aria-label="Posts à relever">
+        <option value="6">6 derniers posts</option>
+        <option value="12">12 derniers</option>
+        <option value="25">25 derniers</option>
+        <option value="all">Tous les posts</option>
+      </select>
+      <button class="btn btn-primary" id="refreshBtn" type="button">↻ Mettre à jour</button>
+    </div>
+  </div>
+  <div id="job" hidden></div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <section id="cmpSec" hidden>
+    <div class="card">
+      <h2 id="cmpTitle">Le dernier post, comparé au même âge</h2>
+      <p class="sub" id="cmpSub"></p>
+      <div class="compare" id="cmp"></div>
+    </div>
+  </section>
+
+  <section id="posts">
+    <div class="card">
+      <div class="head-row" style="margin-bottom:12px">
+        <div><h2>Tous les posts relevés</h2><p class="sub" style="margin:0">Clique une ligne pour voir son détail. En vert : le meilleur de chaque colonne. ‰ = pour 1 000 vues. 3 h, 24 h, 48 h : vues à cet âge réel.</p></div>
+        <button type="button" class="btn" id="colsBtn">Toutes les colonnes</button>
+      </div>
+      <div class="tablewrap"><table id="tbl"></table></div>
+    </div>
+  </section>
+
+  <section id="courbes">
+    <div class="card">
+      <div class="head-row" style="margin-bottom:6px">
+        <div><h2>Vues depuis la sortie du post</h2><p class="sub" style="margin:0">À l'âge réel de chaque post. Choisis jusqu'à 6 posts.</p></div>
+        <div class="seg" id="modeSeg"><button type="button" data-m="cumul" aria-pressed="true">Cumul</button><button type="button" data-m="vues" aria-pressed="false">Par heure</button></div>
+      </div>
+      <div class="chips" id="chips" style="margin-top:12px"></div>
+      <div class="chart" id="viewsChart"></div>
+    </div>
+  </section>
+
+  <section id="retention">
+    <div class="card">
+      <h2>Rétention slide par slide</h2>
+      <p class="sub">Part des spectateurs encore là à chaque slide. TikTok la calcule environ 36 h après le post.</p>
+      <div class="chart" id="retChart"></div>
+    </div>
+  </section>
+
+  <section id="detail">
+    <div class="card">
+      <p class="eyebrow" id="detEyebrow">Détail du post</p>
+      <h2 id="detTitle">—</h2>
+      <p class="sub" id="detSub"></p>
+      <div class="two">
+        <div><h3>Vues par heure</h3><div class="chart" id="detHours"></div></div>
+        <div><h3>Visionnage complet par heure (%)</h3><div class="chart" id="detFinish"></div></div>
+      </div>
+      <details class="more">
+        <summary>Audience de ce post</summary>
+        <div class="three" style="margin-top:16px">
+          <div><h3>D'où viennent les vues</h3><div class="split" id="detSource"></div></div>
+          <div><h3>Âge</h3><div class="split" id="detAge"></div><h3 style="margin-top:16px">Sexe</h3><div class="split" id="detSex"></div></div>
+          <div><h3>Pays</h3><div class="split" id="detPays"></div></div>
+        </div>
+      </details>
+    </div>
+  </section>
+
+  <section id="compte">
+    <div class="card">
+      <h2>Le compte</h2>
+      <p class="sub">Historique jour par jour publié par TikTok (j-0 = dernier jour disponible, souvent hier).</p>
+      <div class="two">
+        <div><h3>Vues par jour</h3><div class="chart" id="accViews"></div></div>
+        <div><h3>Abonnés (total)</h3><div class="chart" id="accFollowers"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <details class="card fold">
+      <summary>Audience du compte : quand tes abonnés sont en ligne, qui te regarde</summary>
+      <h3 style="margin-top:20px">Quand tes abonnés sont en ligne</h3>
+      <p class="sub" id="heatSub">Moyenne de la semaine, heure de Paris. Plus c'est foncé, plus il y a de monde.</p>
+      <div id="heat"></div>
+      <h3 style="margin-top:28px">Qui te regarde</h3>
+      <p class="sub">Audience du compte (abonnés et spectateurs), et ce que les gens tapent pour te trouver.</p>
+      <div class="three" id="accSplit"></div>
+    </details>
+  </section>
+
+  <section id="prediction">
+    <div class="card">
+      <div class="head-row">
+        <div><p class="eyebrow">Prédiction</p><h2>Combien de vues à 48 h ?</h2></div>
+        <select class="sel" id="predSel" aria-label="Post à prédire"></select>
+      </div>
+      <p class="note" id="predAlert" style="margin:16px 0 0" hidden></p>
+      <div class="pred-hero">
+        <div class="pred-main"><div class="k" id="predMainK">Vues à 48 h</div><div class="big" id="predBig">–</div><div class="d" id="predRange"></div></div>
+        <div class="pred-wave" id="predWaveBox" hidden><div class="k">Avec une 2e vague</div><div class="mid" id="predWave">–</div><div class="d" id="predWaveSub"></div></div>
+      </div>
+      <p class="pred-why" id="predWhy"></p>
+      <div class="chart" id="predChart"></div>
+
+      <details class="more">
+        <summary>Comment c'est calculé, et à quel point s'y fier</summary>
+        <p class="sub" id="predHow" style="margin-top:12px"></p>
+        <h3>Ce post face aux 6 derniers, au même âge</h3>
+        <div class="tablewrap"><table id="whyTbl"></table></div>
+        <h3>Test à l'aveugle</h3>
+        <p class="sub" style="margin-bottom:8px">Chaque post est prédit seulement avec les posts sortis avant lui, puis comparé à ses vraies vues à 48 h. ≈ : le post n'a pas encore 48 h, sa fin est estimée.</p>
+        <div class="tablewrap"><table id="backTbl"></table></div>
+        <h3>Journal</h3>
+        <p class="sub" style="margin-bottom:8px" id="jrnSub"></p>
+        <div class="tablewrap"><table id="jrnTbl"></table></div>
+        <p class="sub" id="predNote" style="margin:16px 0 0"></p>
+      </details>
+    </div>
+  </section>
+</main>
+<div class="tip" id="tip"></div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ------------------------------------------------------------ thème (même clé que l'Espace privé)
+(function () {
+  const KEY = 'qcm-maths-theme', ICON = { auto: '◐', light: '☀', dark: '☾' };
+  const btn = document.getElementById('themeBtn');
+  const apply = t => {
+    if (t === 'auto') document.documentElement.removeAttribute('data-theme'); else document.documentElement.dataset.theme = t;
+    btn.textContent = ICON[t]; btn.dataset.mode = t; btn.title = 'Thème : ' + ({ auto: 'automatique', light: 'clair', dark: 'sombre' })[t];
+  };
+  let t = 'auto'; try { t = localStorage.getItem(KEY) || 'auto'; } catch (e) {}
+  apply(t);
+  btn.addEventListener('click', () => {
+    const nx = ({ auto: 'light', light: 'dark', dark: 'auto' })[btn.dataset.mode];
+    try { localStorage.setItem(KEY, nx); } catch (e) {}
+    apply(nx); if (window.redraw) redraw();
+  });
+})();
+
+// ------------------------------------------------------------ outils
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const nf = new Intl.NumberFormat('fr-FR');
+const fmt = (v, d = 0) => v == null || v === '' || Number.isNaN(v) ? '–' : nf.format(+(+v).toFixed(d));
+const short = v => v == null ? '–' : v >= 10000 ? nf.format(Math.round(v / 100) / 10) + ' k' : nf.format(Math.round(v));
+const day = s => { const d = new Date(s.replace(' ', 'T')); return d.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h'); };
+const tip = $('tip');
+function showTip(html, ev) {
+  tip.innerHTML = html; tip.style.display = 'block';
+  const w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + 14, y = ev.clientY + 14;
+  if (x + w > innerWidth - 8) x = ev.clientX - w - 14;
+  if (y + h > innerHeight - 8) y = ev.clientY - h - 14;
+  tip.style.left = x + 'px'; tip.style.top = y + 'px';
+}
+const hideTip = () => { tip.style.display = 'none'; };
+function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 3500); }
+function niceMax(v) { if (!(v > 0)) return 1; const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
+
+// ------------------------------------------------------------ état
+let D = null, sortKey = 'poste_le', sortDir = -1, selected = [], colorOf = {}, detailId = null, mode = 'cumul';
+const SLOTS = ['--s1', '--s2', '--s3', '--s4', '--s5', '--s6'];
+const label = p => p.nom ? p.nom.split(' · ')[0] : day(p.poste_le);
+const fullName = p => p.nom || day(p.poste_le);
+const color = id => colorOf[id] ? `var(${colorOf[id]})` : 'var(--rule-strong)';
+function select(id, on) {
+  if (on) {
+    if (selected.includes(id)) return;
+    if (selected.length >= 6) { toast('6 posts maximum sur le graphique : retire-en un.'); return; }
+    const used = new Set(selected.map(i => colorOf[i]));
+    colorOf[id] = SLOTS.find(s => !used.has(s)); selected.push(id);
+  } else { selected = selected.filter(i => i !== id); delete colorOf[id]; }
+}
+
+// ------------------------------------------------------------ graphiques SVG
+function lineChart(el, { series, xMax, yMax, xFmt, yFmt, xTitle, tipTitle, height = 300, xTicks }) {
+  const W = Math.max(el.clientWidth, 320), H = height, m = { l: 52, r: 96, t: 12, b: 34 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b;
+  yMax = niceMax(yMax ?? Math.max(1, ...series.flatMap(s => s.points.map(p => p[1] || 0))));
+  xMax = xMax ?? Math.max(1, ...series.flatMap(s => s.points.map(p => p[0])));
+  const X = x => m.l + (xMax <= 1 ? 0 : (x - 1) / (xMax - 1) * iw), Y = y => m.t + ih - (y / yMax) * ih;
+  let g = '';
+  for (let i = 0; i <= 4; i++) {
+    const v = yMax * i / 4, y = Y(v);
+    g += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y}" y2="${y}" stroke="var(${i ? '--grid' : '--axis'})" stroke-width="1"/>`;
+    g += `<text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${yFmt(v)}</text>`;
+  }
+  const ticks = xTicks || (() => { const st = xMax > 36 ? 6 : xMax > 18 ? 3 : xMax > 8 ? 2 : 1; const a = []; for (let x = 1; x <= xMax; x += st) a.push(x); return a; })();
+  ticks.forEach(x => { g += `<text x="${X(x)}" y="${m.t + ih + 20}" text-anchor="middle">${xFmt(x)}</text>`; });
+  if (xTitle) g += `<text x="${m.l + iw}" y="${H - 1}" text-anchor="end">${esc(xTitle)}</text>`;
+  const ends = [], clip = 'c' + Math.random().toString(36).slice(2, 8);
+  g += `<clipPath id="${clip}"><rect x="${m.l - 6}" y="${m.t - 6}" width="${iw + 12}" height="${ih + 6}"/></clipPath>`;
+  series.forEach(s => {
+    const pts = s.points.filter(p => p[1] != null);
+    if (!pts.length) return;
+    const d = pts.map((p, i) => `${i ? 'L' : 'M'}${X(p[0]).toFixed(1)},${Y(p[1]).toFixed(1)}`).join('');
+    if (!s.dots) g += `<path clip-path="url(#${clip})" d="${d}" fill="none" stroke="${s.color}" stroke-width="${s.width || 2}" stroke-linejoin="round" stroke-linecap="round"${s.dash ? ` stroke-dasharray="${s.dash}"` : ''}${s.op ? ` opacity="${s.op}"` : ''}/>`;
+    const last = pts[pts.length - 1];
+    if (s.dots) pts.forEach(p => { g += `<circle cx="${X(p[0])}" cy="${Y(p[1])}" r="4" fill="${s.color}" stroke="var(--sheet)" stroke-width="1.5"/>`; });
+    else if (pts.length === 1) g += `<circle cx="${X(last[0])}" cy="${Y(last[1])}" r="4" fill="${s.color}" stroke="var(--sheet)" stroke-width="2"/>`;
+    if (s.label !== false && last[1] <= yMax) ends.push({ y: Y(last[1]), x: X(last[0]), name: s.label || s.name, color: s.color });
+  });
+  // étiquettes directes en bout de ligne, écartées pour ne pas se chevaucher
+  ends.sort((a, b) => a.y - b.y);
+  for (let i = 1; i < ends.length; i++) if (ends[i].y - ends[i - 1].y < 15) ends[i].y = ends[i - 1].y + 15;
+  ends.forEach(e => { g += `<text class="lbl" x="${e.x + 8}" y="${e.y + 4}">${esc(e.name)}</text>`; });
+  g += `<line id="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--rule-strong)" stroke-width="1" visibility="hidden"/><g id="hd"></g>`;
+  g += `<rect x="${m.l}" y="${m.t}" width="${iw}" height="${ih}" fill="transparent" class="hit"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img">${g}</svg>`;
+  const svg = el.querySelector('svg'), xh = svg.querySelector('#xh'), hd = svg.querySelector('#hd');
+  const hit = svg.querySelector('.hit');
+  hit.addEventListener('mousemove', ev => {
+    const r = svg.getBoundingClientRect(), px = (ev.clientX - r.left) * (W / r.width);
+    const x = Math.max(1, Math.min(xMax, Math.round(1 + (px - m.l) / iw * (xMax - 1))));
+    xh.setAttribute('x1', X(x)); xh.setAttribute('x2', X(x)); xh.setAttribute('visibility', 'visible');
+    const rows = series.filter(s => s.tip !== false).map(s => ({ s, p: s.points.find(p => p[0] === x) || s.points.find(p => Math.abs(p[0] - x) < 0.5) })).filter(o => o.p && o.p[1] != null);
+    hd.innerHTML = rows.map(o => `<circle cx="${X(x)}" cy="${Y(o.p[1])}" r="4.5" fill="${o.s.color}" stroke="var(--sheet)" stroke-width="2"/>`).join('');
+    rows.sort((a, b) => b.p[1] - a.p[1]);
+    showTip(`<div class="t">${esc(tipTitle(x))}</div>` + (rows.length ? rows.map(o => `<div class="r"><span><i class="dot" style="background:${o.s.color}"></i>${esc(o.s.name)}</span><b>${yFmt(o.p[1], true)}</b></div>`).join('') : '<div class="muted">pas de donnée</div>'), ev);
+  });
+  hit.addEventListener('mouseleave', () => { xh.setAttribute('visibility', 'hidden'); hd.innerHTML = ''; hideTip(); });
+}
+
+function barChart(el, { bars, colorVar = '--s1', yFmt = short, height = 220, every = 1 }) {
+  const W = Math.max(el.clientWidth, 280), H = height, m = { l: 46, r: 8, t: 10, b: 30 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, n = Math.max(bars.length, 1);
+  const yMax = niceMax(Math.max(1, ...bars.map(b => b.value || 0)));
+  const bw = iw / n, Y = v => m.t + ih - v / yMax * ih;
+  let g = '';
+  for (let i = 0; i <= 4; i++) { const v = yMax * i / 4, y = Y(v); g += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y}" y2="${y}" stroke="var(${i ? '--grid' : '--axis'})"/><text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${yFmt(v)}</text>`; }
+  bars.forEach((b, i) => {
+    const x = m.l + i * bw + 1, w = Math.max(1, bw - 2), v = b.value || 0, h = Math.max(0, ih - (Y(v) - m.t)), y = Y(v);
+    const r = Math.min(4, w / 2, h);
+    if (h > 0) g += `<path d="M${x},${y + h}V${y + r}Q${x},${y} ${x + r},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h}Z" fill="var(${colorVar})"/>`;
+    if (i % every === 0) g += `<text x="${x + w / 2}" y="${m.t + ih + 18}" text-anchor="middle">${esc(b.label)}</text>`;
+    g += `<rect x="${m.l + i * bw}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img">${g}</svg>`;
+  el.querySelectorAll('rect[data-i]').forEach(r => {
+    r.addEventListener('mousemove', ev => { const b = bars[+r.dataset.i]; showTip(`<div class="t">${esc(b.tip || b.label)}</div><div class="r"><span>${esc(b.what || 'Valeur')}</span><b>${b.value == null ? '–' : fmt(b.value, 1)}</b></div>`, ev); });
+    r.addEventListener('mouseleave', hideTip);
+  });
+}
+
+function splitList(el, rows, colorVar = '--s1') {
+  rows = rows.filter(r => r.v != null).sort((a, b) => b.v - a.v);
+  if (!rows.length) { el.innerHTML = '<p class="muted" style="margin:0">Pas encore de donnée.</p>'; return; }
+  const max = Math.max(...rows.map(r => r.v), 1);
+  el.innerHTML = rows.map(r => `<div class="r"><span title="${esc(r.k)}">${esc(r.k)}</span><div class="track"><i style="width:${(r.v / max * 100).toFixed(1)}%;background:var(${colorVar})"></i></div><b>${fmt(r.v, r.v < 10 ? 1 : 0)} %</b></div>`).join('');
+}
+
+// ------------------------------------------------------------ rendu
+const COLS = [
+  ['vues', 'Vues', 0], ['completion_%', 'Complétion %', 1], ['temps_moyen_s', 'Moy. (s)', 1],
+  ['likes_‰', 'Likes ‰', 1], ['favoris_‰', 'Favoris ‰', 1], ['partages_‰', 'Partages ‰', 1], ['abonnes_‰', 'Abonnés ‰', 1],
+  ['commentaires', 'Comm.', 0], ['vues_3h', '3 h', 0], ['vues_12h', '12 h', 0], ['vues_24h', '24 h', 0], ['vues_48h', '48 h', 0],
+];
+const MAIN_COLS = new Set(['vues', 'completion_%', 'favoris_‰', 'abonnes_‰', 'vues_3h', 'vues_24h', 'vues_48h']);
+let allCols = false;
+const SRC = { 'For You': 'Pour toi', 'Personal Profile': 'Profil', 'Search': 'Recherche', 'Follow': 'Abonnements', 'Direct Message': 'Messages', 'Sound': 'Son', 'Others': 'Autres' };
+const SEX = { female_vv: 'Femmes', male_vv: 'Hommes', other_vv: 'Autre', Female: 'Femmes', Male: 'Hommes', Other: 'Autre' };
+const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse', CA: 'Canada', MA: 'Maroc', DZ: 'Algérie', TN: 'Tunisie', GB: 'Royaume-Uni', US: 'États-Unis', DE: 'Allemagne', BR: 'Brésil', ES: 'Espagne', IT: 'Italie', SN: 'Sénégal', CI: "Côte d'Ivoire", RE: 'La Réunion', LU: 'Luxembourg', CD: 'RD Congo', CG: 'Congo', CM: 'Cameroun', MQ: 'Martinique', GP: 'Guadeloupe', GF: 'Guyane', NC: 'Nouvelle-Calédonie', PF: 'Polynésie', YT: 'Mayotte', HT: 'Haïti', MG: 'Madagascar', BJ: 'Bénin', ML: 'Mali', GA: 'Gabon', BF: 'Burkina Faso', GN: 'Guinée', TG: 'Togo', MU: 'Maurice', AU: 'Australie', NL: 'Pays-Bas', PT: 'Portugal', MX: 'Mexique', JP: 'Japon', IN: 'Inde', TR: 'Turquie' };
+
+function renderKpis() {
+  const S = D.summary, last = S[0];
+  const best = [...S].sort((a, b) => b.vues - a.vues)[0];
+  const avg = D.compte.active_hours.find(r => r.qui === 'abonnés' && r.jour === 'moyenne');
+  let hours = '–';
+  if (avg) { const top = [...Array(24).keys()].sort((a, b) => (avg[b + 'h'] || 0) - (avg[a + 'h'] || 0)).slice(0, 4).sort((a, b) => a - b); hours = `${top[0]}h – ${top[top.length - 1] + 1}h`; }
+  const k = [
+    ['Abonnés', fmt(D.compte.followers ?? last?.abonnes_compte), `sur le compte ${ACC.toUpperCase()}`],
+    ['Dernier post', short(last?.vues), last ? `${esc(fullName(last))} · ${fmt(last.age_h, 1)} h · ${fmt(last['completion_%'], 1)} % complet` : ''],
+    ['Meilleur post', short(best?.vues), best ? esc(fullName(best)) : ''],
+    ['Abonnés en ligne surtout', hours, 'heure de Paris, moyenne 7 j'],
+  ];
+  $('kpis').innerHTML = k.map(([a, b, c]) => `<div class="card kpi"><div class="k">${a}</div><div class="v">${b}</div><div class="d">${c}</div></div>`).join('');
+}
+
+// vues d'un post à a heures d'âge réel (null si le post n'a pas encore cet âge)
+function viewsAtAge(p, a) {
+  const c = p.courbe || [];
+  if (!c.length || a > c[c.length - 1][0] + 1e-6) return null;
+  const i = c.findIndex(pt => pt[0] >= a);
+  if (i <= 0) return c[Math.max(i, 0)][1];
+  const [x0, y0] = c[i - 1], [x1, y1] = c[i];
+  return y0 + (y1 - y0) * (a - x0) / (x1 - x0);
+}
+function renderCompare() {
+  const last = D.summary[0], age = last?.age_h;
+  if (!last || !age) { $('cmpSec').hidden = true; return; }
+  const rows = D.summary.map(p => ({ p, v: p.id === last.id ? last.vues : viewsAtAge(p, age) })).filter(r => r.v != null);
+  if (rows.length < 2) { $('cmpSec').hidden = true; return; }
+  $('cmpSec').hidden = false;
+  $('cmpTitle').textContent = `${fullName(last)} : ${fmt(last.vues)} vues à ${fmt(age, 1)} h`;
+  const others = rows.filter(r => r.p.id !== last.id).map(r => r.v).sort((a, b) => a - b);
+  const med = others[Math.floor(others.length / 2)];
+  $('cmpSub').textContent = `Tous les posts au même âge (${fmt(age, 1)} h). Médiane des autres : ${fmt(med)} vues${med ? `, le dernier fait ×${fmt(last.vues / med, 1)}` : ''}.`;
+  const max = Math.max(...rows.map(r => r.v), 1);
+  rows.sort((a, b) => b.v - a.v);
+  $('cmp').innerHTML = rows.map(r => `<div class="cmp-row"><span>${r.p.id === last.id ? '<b>' + esc(fullName(r.p)) + '</b>' : esc(fullName(r.p))}</span><div class="bar"><i style="width:${(r.v / max * 100).toFixed(1)}%;background:${r.p.id === last.id ? 'var(--pen)' : 'var(--rule-strong)'}"></i></div><b>${fmt(r.v)}</b></div>`).join('');
+}
+
+function renderTable() {
+  const S = [...D.summary], cols = allCols ? COLS : COLS.filter(c => MAIN_COLS.has(c[0]));
+  S.sort((a, b) => { const x = a[sortKey], y = b[sortKey]; if (x == null) return 1; if (y == null) return -1; return (x > y ? 1 : x < y ? -1 : 0) * sortDir; });
+  const best = {};
+  COLS.forEach(([k]) => { const vals = D.summary.map(p => p[k]).filter(v => v != null); if (vals.length > 1) best[k] = Math.max(...vals); });
+  const th = (k, t) => `<th data-k="${k}"${sortKey === k ? ` aria-sort="${sortDir > 0 ? 'ascending' : 'descending'}"` : ''}>${t}</th>`;
+  $('tbl').innerHTML = `<thead><tr>${th('poste_le', 'Post')}${cols.map(([k, t]) => th(k, t)).join('')}</tr></thead><tbody>` +
+    S.map(p => `<tr data-id="${p.id}" class="${p.id === detailId ? 'on' : ''}"><td><div class="post-cell"><i class="dot" style="background:${color(p.id)}"></i><div><b>${esc(fullName(p))}</b><small>${esc(day(p.poste_le))} · ${fmt(p.age_h, 1)} h · ${esc((p.description || '').slice(0, 60))}</small></div></div></td>` +
+      cols.map(([k, , d]) => { const v = p[k]; const s = fmt(v, d); return `<td>${v != null && v === best[k] ? `<span class="best">${s}</span>` : s}</td>`; }).join('') + '</tr>').join('') + '</tbody>';
+  $('tbl').querySelectorAll('th').forEach(t => t.onclick = () => { const k = t.dataset.k; if (sortKey === k) sortDir = -sortDir; else { sortKey = k; sortDir = -1; } renderTable(); });
+  $('tbl').querySelectorAll('tbody tr').forEach(r => r.onclick = () => { detailId = r.dataset.id; if (!selected.includes(detailId)) select(detailId, true); redraw(); $('detail').scrollIntoView(); });
+}
+
+function renderChips() {
+  $('chips').innerHTML = D.summary.map(p => `<button type="button" class="chip" data-id="${p.id}" aria-pressed="${selected.includes(p.id)}"><i class="dot" style="background:${color(p.id)}"></i>${esc(label(p))}</button>`).join('');
+  $('chips').querySelectorAll('.chip').forEach(c => c.onclick = () => { select(c.dataset.id, !selected.includes(c.dataset.id)); redraw(); });
+}
+
+function renderViews() {
+  const ser = selected.map(id => D.summary.find(p => p.id === id)).filter(Boolean).map(p => {
+    const points = [];
+    for (let h = 1; h <= Math.min(48, Math.floor(p.age_h)); h++) {
+      const v = viewsAtAge(p, h);
+      if (v != null) points.push([h, mode === 'cumul' ? v : v - (viewsAtAge(p, h - 1) || 0)]);
+    }
+    return { name: label(p), color: color(p.id), points };
+  });
+  if (!ser.length) { $('viewsChart').innerHTML = '<p class="muted">Choisis au moins un post ci-dessus.</p>'; return; }
+  const xMax = Math.max(2, ...ser.flatMap(s => s.points.map(p => p[0])));
+  lineChart($('viewsChart'), { series: ser, xMax, xFmt: x => x + ' h', yFmt: v => short(v), xTitle: 'heures depuis le post', tipTitle: x => `${x} h après le post`, height: 330 });
+}
+
+function renderRetention() {
+  const ids = [...new Set(D.slides.map(s => s.id))];
+  const ser = ids.map(id => D.summary.find(p => p.id === id)).filter(Boolean)
+    .filter(p => selected.includes(p.id) || !ids.some(i => selected.includes(i)))
+    .map(p => ({ name: label(p), color: selected.includes(p.id) ? color(p.id) : 'var(--ink-2)', points: D.slides.filter(s => s.id === p.id).map(s => [s.slide, s['retention_%']]) }));
+  if (!ser.length) { $('retChart').innerHTML = '<p class="muted" style="margin:0">Pas encore calculée pour ces posts (il faut ~36 h).</p>'; return; }
+  const xMax = Math.max(...ser.flatMap(s => s.points.map(p => p[0])));
+  lineChart($('retChart'), { series: ser, xMax, yMax: 100, xFmt: x => x === 1 ? 'cover' : x === xMax ? 'CTA' : String(x), yFmt: (v, t) => fmt(v, t ? 1 : 0) + ' %', tipTitle: x => `Slide ${x}${x === 1 ? ' (couverture)' : x === xMax ? ' (App Store)' : ''}`, height: 300, xTicks: [...Array(xMax).keys()].map(i => i + 1) });
+}
+
+function renderDetail() {
+  const p = D.summary.find(x => x.id === detailId) || D.summary[0];
+  if (!p) return;
+  detailId = p.id;
+  $('detEyebrow').textContent = `Détail · ${day(p.poste_le)} · ${fmt(p.age_h, 1)} h en ligne`;
+  $('detTitle').textContent = fullName(p);
+  $('detSub').innerHTML = `${fmt(p.vues)} vues · ${fmt(p.likes)} likes · ${fmt(p.favoris)} favoris · ${fmt(p.partages)} partages · ${fmt(p.commentaires)} commentaires · ${fmt(p.abonnes_gagnes)} abonnés gagnés · ${fmt(p['completion_%'], 1)} % vont au bout · ${fmt(p.temps_moyen_s, 1)} s en moyenne<br><span class="muted">${esc(p.description)}</span>`;
+  const H = D.hours.filter(h => h.id === p.id);
+  const lab = h => h.heure.slice(11, 13) + 'h';
+  barChart($('detHours'), { bars: H.map(h => ({ label: lab(h), value: h.vues, tip: day(h.heure), what: 'Vues' })), every: Math.ceil(H.length / 12) || 1, colorVar: '--s1' });
+  const F = H.filter(h => h.completion != null);
+  if (F.length) barChart($('detFinish'), { bars: F.map(h => ({ label: lab(h), value: Math.round(h.completion * 1000) / 10, tip: day(h.heure), what: 'Complétion %' })), every: Math.ceil(F.length / 12) || 1, colorVar: '--s3', yFmt: v => fmt(v) + ' %' });
+  else $('detFinish').innerHTML = '<p class="muted" style="margin:0">Après 48 h, TikTok ne donne plus la complétion heure par heure.</p>';
+  const A = t => D.audience.filter(a => a.id === p.id && a.type === t);
+  splitList($('detSource'), A('source').map(a => ({ k: SRC[a.cle] || a.cle, v: a['part_%'] })).filter(r => r.v > 0));
+  splitList($('detAge'), A('age').map(a => ({ k: a.cle, v: a['part_%'] })).sort(), '--s1');
+  splitList($('detSex'), A('sexe').map(a => ({ k: SEX[a.cle] || a.cle, v: a['part_%'] })).filter(r => r.v > 0), '--s5');
+  splitList($('detPays'), A('pays').map(a => ({ k: PAYS[a.cle] || a.cle, v: a['part_%'] })).slice(0, 8), '--s3');
+}
+
+function renderAccount() {
+  const ser = n => D.compte.days.filter(d => d.serie === n);
+  const V = ser('vues');
+  if (V.length) barChart($('accViews'), { bars: V.map(d => ({ label: d.jour, value: d.valeur, what: 'Vues' })), every: 3, colorVar: '--s1' });
+  else $('accViews').innerHTML = '<p class="muted">Relève avec les stats du compte pour voir ça.</p>';
+  const F = ser('abonnes_total').filter(d => d.valeur != null);
+  if (F.length) {
+    const max = Math.max(...F.map(d => d.valeur));
+    lineChart($('accFollowers'), { series: [{ name: fmt(F[F.length - 1].valeur), color: 'var(--s1)', points: F.map((d, i) => [i + 1, d.valeur]) }], xMax: F.length, yMax: max, xFmt: x => F[x - 1]?.jour || '', yFmt: v => fmt(v), tipTitle: x => F[x - 1]?.jour || '', height: 220, xTicks: F.map((_, i) => i + 1).filter(i => (i - 1) % 3 === 0) });
+  } else $('accFollowers').innerHTML = '<p class="muted">Pas de donnée.</p>';
+
+  // heures actives
+  const rows = D.compte.active_hours.filter(r => r.qui === 'abonnés');
+  const rowsV = D.compte.active_hours.filter(r => r.qui === 'spectateurs' && r.jour === 'moyenne');
+  const all = [...rows.filter(r => r.jour !== 'moyenne'), ...rows.filter(r => r.jour === 'moyenne'), ...rowsV];
+  if (all.length) {
+    const ramp = ['--h1', '--h2', '--h3', '--h4', '--h5', '--h6', '--h7'];
+    const cell = (r, h, max) => { const v = r[h + 'h'] || 0, i = max ? Math.min(6, Math.floor(v / max * 6.999)) : 0; return `<div class="c" style="background:var(${v ? ramp[i] : '--h0'})" data-t="${esc(r.qui + ' · ' + (r.jour === 'moyenne' ? 'moyenne' : r.jour) + ' · ' + h + 'h–' + (h + 1) + 'h')}" data-v="${v}"></div>`; };
+    let html = '<div class="heat"><span></span>' + [...Array(24).keys()].map(h => `<span class="hh">${h % 3 === 0 ? h + 'h' : ''}</span>`).join('');
+    all.forEach(r => { const max = Math.max(...[...Array(24).keys()].map(h => r[h + 'h'] || 0)); html += `<span class="lab">${r.jour === 'moyenne' ? (r.qui === 'abonnés' ? '<b>Abonnés moy.</b>' : '<b>Spect. moy.</b>') : r.jour}</span>` + [...Array(24).keys()].map(h => cell(r, h, max)).join(''); });
+    html += '</div><div class="legend-ramp">moins&nbsp;' + ['--h1', '--h2', '--h3', '--h4', '--h5', '--h6', '--h7'].map(v => `<i style="background:var(${v})"></i>`).join('') + '&nbsp;plus <span style="margin-left:auto">chaque ligne a sa propre échelle</span></div>';
+    $('heat').innerHTML = html;
+    $('heat').querySelectorAll('.c').forEach(c => { c.onmousemove = ev => showTip(`<div class="t">${c.dataset.t}</div><div class="r"><span>Personnes actives</span><b>${fmt(+c.dataset.v)}</b></div>`, ev); c.onmouseleave = hideTip; });
+  } else $('heat').innerHTML = '<p class="muted">Relève avec les stats du compte pour voir ça.</p>';
+
+  // audience du compte
+  const sp = n => D.compte.split.filter(s => s.serie === n);
+  const blocks = [
+    ['Abonnés · âge', sp('follower_age_distribution').map(s => ({ k: s.cle, v: s['part_%'] })), '--s1'],
+    ['Abonnés · sexe', sp('follower_gender_percent').map(s => ({ k: SEX[s.cle] || s.cle, v: s['part_%'] })).filter(r => r.v > 0), '--s5'],
+    ['Abonnés · pays', sp('follower_location_percent').map(s => ({ k: PAYS[s.cle] || s.cle, v: s['part_%'] })).slice(0, 7), '--s3'],
+    ['Spectateurs · âge', sp('viewer_age_distribution').map(s => ({ k: s.cle, v: s['part_%'] })), '--s1'],
+    ['Spectateurs · sexe', sp('viewer_gender_percent').map(s => ({ k: SEX[s.cle] || s.cle, v: s['part_%'] })).filter(r => r.v > 0), '--s5'],
+    ['Spectateurs · pays', sp('viewer_country_city_percent').map(s => ({ k: PAYS[s.cle] || s.cle, v: s['part_%'] })).slice(0, 7), '--s3'],
+    ['Sources des vues', sp('video_page_percent').map(s => ({ k: SRC[s.cle] || s.cle, v: s['part_%'] })).filter(r => r.v > 0), '--s2'],
+    ['Recherches qui mènent au compte', sp('user_search_terms').map(s => ({ k: s.cle, v: s['part_%'] })), '--s2'],
+  ];
+  $('accSplit').innerHTML = blocks.map((b, i) => `<div><h3>${b[0]}</h3><div class="split" id="as${i}"></div></div>`).join('');
+  blocks.forEach((b, i) => splitList($('as' + i), b[1], b[2]));
+}
+
+// ------------------------------------------------------------ prédiction (calculée par predict.py)
+let predId = null, PRED = null, predReq = 0;
+const hrs = a => fmt(a, a < 10 ? 1 : 0) + ' h';
+const signed = r => (r >= 1 ? '+' : '−') + fmt(Math.abs(r - 1) * 100) + ' %';
+const ecart = k => k == null ? '–' : k >= 2 ? '×' + fmt(k, 1) : '±' + fmt((k - 1) * 100) + ' %';
+function mfmt(k, v) {
+  if (v == null) return '–';
+  if (k === 'completion') return fmt(v * 100, 1) + ' %';
+  if (k.endsWith('_k')) return fmt(v, v < 10 ? 1 : 0) + ' ‰';
+  return fmt(v);
+}
+const predBox = (k, big, range) => { $('predMainK').textContent = k; $('predBig').textContent = big; $('predRange').innerHTML = range; };
+function clearPred() { $('predChart').innerHTML = ''; $('predWhy').innerHTML = ''; $('predAlert').hidden = true; $('predWaveBox').hidden = true; }
+
+async function renderPrediction() {
+  const opts = D.summary;
+  if (!opts.some(p => p.id === predId)) predId = opts[0]?.id;
+  $('predSel').innerHTML = opts.map(p => `<option value="${p.id}"${p.id === predId ? ' selected' : ''}>${esc(fullName(p))} · ${fmt(p.age_h, 0)} h</option>`).join('');
+  if (PRED && PRED._id === predId && PRED._run === D.run) return drawPrediction();
+  const req = ++predReq;
+  try {
+    const r = await fetch('/api/prediction?account=' + ACC + '&id=' + encodeURIComponent(predId || ''));
+    const P = await r.json();
+    if (!r.ok) throw new Error(P.error || 'erreur ' + r.status);
+    if (req !== predReq) return;
+    PRED = Object.assign(P, { _id: predId, _run: D.run });
+  } catch (e) { clearPred(); predBox('Vues à 48 h', '–', esc(e.message)); return; }
+  drawPrediction();
+}
+
+function drawForecast(P, T, pv) {
+  predBox(pv.vague ? 'Sans 2e vague' : 'Vues à 48 h', '≈ ' + short(pv.central), `1 chance sur 2 entre <b>${short(pv.bas)} et ${short(pv.haut)}</b>`);
+  if (pv.vague) {
+    $('predWaveBox').hidden = false;
+    $('predWave').textContent = '≈ ' + short(pv.vague);
+    $('predWaveSub').textContent = `${P.vagues.nb} des ${P.vagues.sur} derniers posts en ont eu une. Elle ne se voit pas avant 8 à 12 h.`;
+  }
+  if (pv.alerte) {
+    $('predAlert').hidden = false;
+    $('predAlert').innerHTML = `<b>Ça repart :</b> ${fmt(pv.alerte.pic)} vues sur une heure, après la 8e heure. ${esc(P.vagues.noms.join(' et '))} ont fait pareil et ont eu une 2e vague.`;
+  }
+  $('predWhy').innerHTML = `Déjà <b>${fmt(T.vues)} vues</b> en ${hrs(T.age)}. Il devrait encore en faire environ <b>${short(Math.round((pv.central - pv.vues) / 100) * 100)}</b>.`;
+  const C = 'var(--pen)', short1 = T.nom.split(' · ')[0];
+  const path = (i, name, o) => ({ name, color: C, points: pv.chemin.map(c => [c[0], c[i]]), ...o });
+  const ser = pv.voisins.map(v => ({ name: v.nom, label: false, color: 'var(--muted)', width: 1.25, op: 0.5, points: v.courbe }));
+  ser.push(path(3, 'haut', { label: false, tip: false, dash: '3 4', width: 1.25, op: 0.6 }), path(2, 'bas', { label: false, tip: false, dash: '3 4', width: 1.25, op: 0.6 }));
+  ser.push(path(1, 'prévision', { label: 'prévision', dash: '8 5', width: 2.5 }));
+  ser.push({ name: short1, label: short1, color: C, width: 3, points: pv.courbe });
+  lineChart($('predChart'), { series: ser, xMax: 48, yMax: Math.max(pv.haut * 1.15, T.vues * 1.2), xFmt: x => x + ' h', yFmt: v => short(v), xTitle: 'heures depuis le post · en gris : les 5 derniers posts', tipTitle: x => `${x} h après le post`, height: 300, xTicks: [1, 6, 12, 18, 24, 30, 36, 42, 48] });
+}
+
+function drawPredDetails(P, T) {
+  const after = P.apres48 ? ` Après 48 h, les derniers posts ont encore pris environ ${signed(P.apres48.ratio)} à 3 jours.` : '';
+  $('predHow').textContent = `Dans les premières heures, les vues disent peu de la fin. La prévision additionne donc ce que le post a déjà fait et ce qu'un post récent fait encore après cet âge. Puis elle suit de plus en plus la courbe du post, et à partir de 12 h seulement elle.${after}`;
+
+  const W = P.pourquoi || [];
+  $('whyTbl').innerHTML = W.length ? `<thead><tr><th>${T ? 'À ' + hrs(Math.min(T.age, 48)) : 'Métrique'}</th><th>Ce post</th><th>Médiane des autres</th><th>Rang</th></tr></thead><tbody>` +
+    W.map(r => `<tr><td><b>${esc(r.label)}</b>${r.unit ? `<small class="muted" style="display:block;font-size:12px">${esc(r.unit)}</small>` : ''}</td><td>${r.rank === 1 ? `<span class="best">${mfmt(r.k, r.v)}</span>` : mfmt(r.k, r.v)}</td><td>${mfmt(r.k, r.med)}</td><td>${r.rank != null ? `${r.rank} / ${r.of}` : '–'}</td></tr>`).join('') + '</tbody>' : '';
+
+  const BA = [2, 6, 12, 24];
+  const cell = x => { if (!x) return '–'; const r = Math.exp(x.err), bad = r > 2 || r < 0.5; return `${short(x.pred)} <span style="${bad ? 'color:var(--bad)' : ''}" class="${bad ? '' : 'muted'}">(${signed(r)})</span>`; };
+  $('backTbl').innerHTML = P.test.length ? `<thead><tr><th>Post</th><th>Vraies vues à 48 h</th>${BA.map(a => `<th>Prédit à ${a} h</th>`).join('')}</tr></thead><tbody>` +
+    P.test.map(t => `<tr${T && t.id === T.id ? ' class="on"' : ''}><td>${esc(t.nom)}${t.vague ? ' <span class="muted">· 2e vague</span>' : ''}</td><td>${t.approx ? '≈ ' : ''}${fmt(t.reel)}</td>${BA.map(a => `<td>${cell(t.at[a])}</td>`).join('')}</tr>`).join('') +
+    `<tr><td><b>Erreur habituelle</b> <span class="muted">(sans les 2e vagues)</span></td><td></td>${BA.map(a => `<td><b>${ecart(P.fiabilite[a]?.k)}</b></td>`).join('')}</tr></tbody>`
+    : '<tbody><tr><td class="muted">Il faut des posts de plus de 24 h pour tester.</td></tr></tbody>';
+
+  const J = P.journal, seen = J.tranches.filter(t => t.posts);
+  const waiting = J.attente ? ` Posts en attente : ${J.attente}.` : '';
+  $('jrnSub').textContent = seen.length
+    ? `Prévisions enregistrées à chaque relevé, comparées aux vraies vues quand le post atteint 48 h.${waiting}`
+    : `Chaque relevé enregistre la prévision du moment. La vérification commencera quand un post prédit atteindra 48 h.${waiting}`;
+  $('jrnTbl').innerHTML = seen.length ? `<thead><tr><th>Âge du post à la prévision</th><th>Posts vérifiés</th><th>Erreur habituelle</th></tr></thead><tbody>` +
+    J.tranches.map(t => `<tr><td>${t.de} à ${t.a} h</td><td>${t.posts}</td><td>${ecart(t.erreur)}</td></tr>`).join('') + '</tbody>' : '';
+
+  const EL = P.en_ligne || {}, r0 = (EL.derniers || [])[0];
+  $('predNote').innerHTML = EL.erreur ? `Relevé en ligne injoignable pour l'instant : la page utilise la dernière copie.`
+    : r0 ? `Relevé en ligne toutes les heures, même PC éteint. Dernier à ${new Date(r0.at * 1000).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}. <a href="${esc(EL.url)}" target="_blank" rel="noopener">Voir le relevé en ligne</a>.` : '';
+}
+
+function drawPrediction() {
+  const P = PRED, T = P.post, pv = P.prevision;
+  clearPred();
+  if (!T) predBox('Vues à 48 h', '–', "Pas de courbe heure par heure pour ce post : TikTok ne la donne que pendant 48 h et il n'a pas été relevé à temps.");
+  else if (T.trop_tot) predBox('Vues à 48 h', '–', 'Reviens après 2 h en ligne : avant, la 1re heure est incomplète.');
+  else if (T.fini) predBox('Vraies vues à 48 h', short(T.reel), `Aujourd'hui : ${fmt(T.vues)} vues.`);
+  else if (pv) drawForecast(P, T, pv);
+  else predBox('Vues à 48 h', '–', "Pas assez d'anciens posts à cet âge pour prédire.");
+  drawPredDetails(P, T);
+}
+$('predSel').onchange = () => { predId = $('predSel').value; renderPrediction(); };
+
+window.redraw = function () {
+  if (!D) return;
+  renderKpis(); renderCompare(); renderTable(); renderChips(); renderViews(); renderRetention(); renderDetail(); renderAccount();
+  renderPrediction().catch(e => { console.error(e); $('predWhy').textContent = 'Prédiction indisponible : ' + e.message; });
+};
+addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(redraw, 150); });
+$('colsBtn').onclick = () => { allCols = !allCols; $('colsBtn').textContent = allCols ? 'Moins de colonnes' : 'Toutes les colonnes'; renderTable(); };
+$('modeSeg').querySelectorAll('button').forEach(b => b.onclick = () => { mode = b.dataset.m; $('modeSeg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x === b)); renderViews(); });
+
+// ------------------------------------------------------------ compte (FR / EN)
+let ACC = 'fr';
+try { const a = localStorage.getItem('stats-account'); if (a === 'fr' || a === 'en') ACC = a; } catch (e) {}
+const ACC_LABEL = { fr: 'ton compte', en: '@vocly.en · compte EN' };
+function markAcc() {
+  $('accSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.a === ACC));
+  $('brandSub').textContent = ACC_LABEL[ACC];
+}
+$('accSeg').querySelectorAll('button').forEach(b => b.onclick = async () => {
+  if (b.dataset.a === ACC) return;
+  ACC = b.dataset.a;
+  try { localStorage.setItem('stats-account', ACC); } catch (e) {}
+  markAcc(); selected = []; predId = null;
+  await loadRuns(); await loadData($('runSel').value);
+});
+markAcc();
+
+// ------------------------------------------------------------ données
+async function loadRuns(pick) {
+  const r = await (await fetch('/api/runs?account=' + ACC)).json();
+  // relevés à la main + les 6 derniers relevés automatiques (un par heure : la liste serait trop longue)
+  let nAuto = 0;
+  const shown = r.filter(x => !x.name.endsWith('-auto') || nAuto++ < 6 || x.name === pick);
+  $('runSel').innerHTML = shown.map(x => { const m = x.name.match(/(\d{4})-(\d\d)-(\d\d)_(\d\d)h(\d\d)/); return `<option value="${x.name}">${m ? `Relevé du ${m[3]}/${m[2]} à ${m[4]}h${m[5]}${x.name.endsWith('-auto') ? ' · auto' : ''}` : x.name}</option>`; }).join('') || '<option value="">Aucun relevé</option>';
+  if (pick) $('runSel').value = pick;
+}
+async function loadData(run) {
+  const res = await fetch('/api/data?account=' + ACC + (run ? '&run=' + encodeURIComponent(run) : ''));
+  const d = await res.json();
+  if (!res.ok) { $('lede').textContent = ACC === 'en' ? 'Aucun relevé pour @vocly.en : connecte le compte (connecter-chrome-en.bat), puis clique « Mettre à jour ».' : d.error; return; }
+  D = d;
+  const ids = D.summary.map(p => p.id);
+  selected = selected.filter(i => ids.includes(i));
+  Object.keys(colorOf).forEach(i => { if (!ids.includes(i)) delete colorOf[i]; });
+  if (!selected.length) ids.slice(0, 6).forEach(i => select(i, true));
+  if (!ids.includes(detailId)) detailId = ids[0];
+  const at = new Date(D.at), mins = Math.round((Date.now() - at) / 60000);
+  const ago = mins < 1 ? "à l'instant" : mins < 60 ? `il y a ${mins} min` : mins < 1440 ? `il y a ${Math.floor(mins / 60)} h ${String(mins % 60).padStart(2, '0')}` : `il y a ${Math.floor(mins / 1440)} j`;
+  $('lede').innerHTML = `Relevé du <b>${at.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })} à ${at.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' }).replace(':', 'h')}</b> (${ago}) · ${D.summary.length} posts. Clique « Mettre à jour » pour un relevé frais.`;
+  redraw();
+}
+$('runSel').onchange = () => loadData($('runSel').value);
+
+// ------------------------------------------------------------ bouton « Mettre à jour »
+let poll = null;
+function showJob(j) {
+  const box = $('job');
+  box.hidden = false;
+  const secs = Math.round(((j.ended || Date.now() / 1000) - j.started));
+  const log = esc((j.lines || []).slice(-8).join('\n'));
+  if (j.running) box.innerHTML = `<div class="note"><span class="spin"></span>&nbsp; Relevé en cours… ${secs} s (environ 15 s)<pre>${log}</pre></div>`;
+  else if (j.code === 0) box.innerHTML = `<div class="note ok">✓ Stats mises à jour en ${secs} s.</div>`;
+  else box.innerHTML = `<div class="note bad">Le relevé a échoué (code ${j.code}). Si TikTok demande une vérification, lance <code>python scrap_stats.py --headed</code> dans tiktok-auto.<pre>${log}</pre></div>`;
+}
+async function watch() {
+  const j = await (await fetch('/api/refresh')).json();
+  if (!j.started) return;
+  showJob(j);
+  $('refreshBtn').disabled = j.running;
+  if (j.running) { poll = setTimeout(watch, 1000); return; }
+  $('refreshBtn').innerHTML = '↻ Mettre à jour';
+  if (j.code === 0 && poll !== 'idle') {
+    await loadRuns(); await loadData($('runSel').value); toast('Stats à jour ✓');
+    setTimeout(() => { if (!$('refreshBtn').disabled) $('job').hidden = true; }, 6000);
+  }
+  poll = 'idle';
+}
+$('refreshBtn').onclick = async () => {
+  $('refreshBtn').disabled = true; $('refreshBtn').innerHTML = '<span class="spin"></span> Relevé…';
+  const n = $('nSel').value;
+  const r = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: n === 'all' ? 'all' : +n, account: ACC }) });
+  if (!r.ok) { const d = await r.json().catch(() => ({})); toast(d.error || 'Impossible de lancer le relevé'); }
+  poll = null; watch();
+};
+
+(async () => {
+  try {
+    await loadRuns(); await loadData($('runSel').value);
+    const j = await (await fetch('/api/refresh')).json();
+    if (j.running) { $('refreshBtn').disabled = true; poll = null; watch(); }
+  } catch (e) { $('lede').textContent = 'Le serveur ne répond pas : lance « python stats_server.py » dans tiktok-auto.'; }
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,46 @@
+STATS TIKTOK (Mac) - mode d'emploi
+===================================
+
+Une page avec les stats TikTok Studio de TON compte : vues heure par heure, taux de visionnage
+complet, rétention slide par slide, pays de l'audience, comparaison des posts au même âge.
+L'outil lit TikTok Studio en lecture seule : il ne poste rien, ne like rien, ne modifie rien.
+Tes chiffres restent sur ton Mac.
+
+L'outil se met à jour tout seul à chaque lancement (il faut juste être connecté à internet).
+
+
+CE QU'IL FAUT
+-------------
+- Un Mac avec Python 3. Si ce n'est pas installé, le premier lancement ouvre la page de
+  téléchargement (python.org) : installe, puis relance.
+- Google Chrome de préférence (sinon l'outil télécharge son propre navigateur).
+
+
+LA PREMIÈRE FOIS
+----------------
+1. Dézippe le dossier où tu veux (par exemple dans Documents). Ne le renomme pas en cours de route.
+2. Clic DROIT sur « Stats TikTok.command » > Ouvrir > Ouvrir.
+   (Le clic droit est obligatoire la première fois : macOS bloque les fichiers téléchargés.
+   Fais pareil la première fois pour « Connecter mon compte.command ».)
+3. L'installation prend 2-3 minutes, une seule fois.
+4. Un navigateur s'ouvre : connecte-toi à TON compte TikTok, va une fois sur
+   https://www.tiktok.com/tiktokstudio, puis ferme cette fenêtre (Cmd+Q).
+5. La page des stats s'ouvre. Clique « Mettre à jour » : un relevé prend 15 à 60 secondes.
+
+
+ENSUITE
+-------
+- Double-clique « Stats TikTok.command ». Laisse la fenêtre noire (Terminal) ouverte tant que tu
+  regardes la page ; ferme-la pour tout arrêter.
+- Fais un relevé plusieurs fois par jour quand un post vient de sortir : TikTok ne donne la courbe
+  heure par heure que pendant les 48 premières heures.
+- Les relevés sont gardés dans le dossier stats-out/ : ne le supprime pas.
+
+
+SI ÇA BLOQUE
+------------
+- « Pas connecté à TikTok » : double-clique « Connecter mon compte.command » et reconnecte-toi.
+- « Le profil Chrome est déjà utilisé » : la fenêtre de connexion est encore ouverte, ferme-la.
+- « BLOQUÉ par TikTok (vérification) » : double-clique « Connecter mon compte.command », fais la
+  vérification dans la fenêtre, ferme-la, puis refais « Mettre à jour ».
+- « La page tourne déjà » : elle est ouverte dans une autre fenêtre Terminal.
