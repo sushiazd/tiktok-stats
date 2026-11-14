@@ -43,7 +43,17 @@ ENSUITE
   (Mac : ~/Library/Application Support ; Windows : %LOCALAPPDATA%).
 - Fais un relevé plusieurs fois par jour quand un post vient de sortir : TikTok ne donne la courbe
   heure par heure que pendant les 48 premières heures.
-- Les relevés sont gardés dans le dossier stats-out/ : ne le supprime pas.
+- Les relevés sont gardés dans les dossiers stats-out : ne les supprime pas.
+
+
+PLUSIEURS COMPTES
+-----------------
+- Bouton « + » en haut de la fenêtre (ou menu ⋯ > Ajouter un compte) : donne un nom au compte,
+  une fenêtre de navigateur s'ouvre, connecte-toi à ce compte TikTok, ferme-la, puis clique
+  « Mettre à jour ».
+- Les boutons en haut passent d'un compte à l'autre.
+- Menu ⋯ : reconnecter, renommer ou retirer le compte affiché (ses relevés restent sur l'ordinateur).
+- La prévision des vues à 48 h ne marche que pour le premier compte.
 
 
 SI ÇA BLOQUE

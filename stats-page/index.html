@@ -81,6 +81,10 @@ button,select,input{font:inherit;color:inherit}
 .menu-panel label{display:grid;gap:5px;font-size:13px;font-weight:600;color:var(--muted)}
 .sel{height:36px;border-radius:10px;border:1px solid var(--rule-strong);background:var(--sheet);padding:0 10px;font-size:14px;font-weight:600;color:var(--ink)}
 .menu-panel a{font-size:13px}
+.acc-tools{display:grid;gap:8px;padding-top:10px;border-top:1px solid var(--rule)}
+.acc-tools[hidden],#addAccForm[hidden]{display:none}
+.acc-title{font-size:13px;font-weight:600;color:var(--muted)}
+#addAccForm{display:grid;gap:8px}
 
 main{max-width:1480px;margin:28px auto 72px;padding:0 36px}
 .status{color:var(--muted);font-size:14px;margin:0 0 14px}
@@ -148,6 +152,7 @@ td small{display:block;color:var(--muted);font-size:12px}
 .trend.up{color:var(--ok)}.trend.down{color:var(--bad)}.trend.flat{color:var(--muted)}
 
 /* mise en page : graphique à gauche, liste des posts à droite */
+.layout[hidden]{display:none}
 .layout{display:grid;grid-template-columns:minmax(0,1fr) 360px;grid-template-areas:"hero side" "compte side" "more side";gap:22px;align-items:start}
 .layout>section{margin-top:0}
 #hero{grid-area:hero}#compte{grid-area:compte}#moreSec{grid-area:more}
@@ -217,12 +222,12 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
 }
 @media (prefers-reduced-motion:reduce){*{transition:none !important;animation:none !important}}
 </style>
-<style>#accSeg{display:none!important}</style>
 </head>
 <body>
 <header class="topbar">
   <div class="brand"><span class="brand-mark" aria-hidden="true">▶</span><strong>Stats TikTok</strong></div>
   <div class="seg" id="accSeg" role="group" aria-label="Compte TikTok"><button type="button" data-a="fr" aria-pressed="true" title="ton compte">FR</button><button type="button" data-a="en" aria-pressed="false" title="@vocly.en">EN</button></div>
+  <button class="icon-btn" id="addAccBtn" type="button" title="Ajouter un compte TikTok" aria-label="Ajouter un compte TikTok" hidden>＋</button>
   <button class="btn btn-primary" id="refreshBtn" type="button">↻ <span class="upd-label">Mettre à jour</span></button>
   <details class="menu" id="menu">
     <summary class="icon-btn" aria-label="Options" title="Options">⋯</summary>
@@ -234,6 +239,14 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
         <option value="all">tous les posts (plus long)</option>
       </select></label>
       <label>Thème<select class="sel" id="themeSel"><option value="auto">Automatique</option><option value="light">Clair</option><option value="dark">Sombre</option></select></label>
+      <div class="acc-tools" id="accTools" hidden>
+        <span class="acc-title">Comptes TikTok</span>
+        <button type="button" class="btn" id="addAccOpen">＋ Ajouter un compte</button>
+        <form id="addAccForm" hidden><input class="sel" id="addAccName" maxlength="40" placeholder="Nom du compte (ex. @moncompte)" autocomplete="off"><button type="submit" class="btn btn-primary" id="addAccSubmit">Ajouter et se connecter</button></form>
+        <button type="button" class="btn" id="reconBtn">Reconnecter ce compte</button>
+        <button type="button" class="btn" id="renameBtn">Renommer ce compte</button>
+        <button type="button" class="btn" id="removeBtn">Retirer ce compte</button>
+      </div>
       <button type="button" class="btn" id="fullBtn" hidden>⛶ Plein écran (F11)</button>
       <a href="/ancien.html">Ancienne page (toutes les stats)</a>
     </div>
@@ -245,7 +258,7 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
   <div id="job" hidden></div>
 
   <!-- 1. le post choisi (par défaut le dernier) -->
-  <div class="layout">
+  <div class="layout" id="layout">
   <section class="card" id="hero">
     <div class="hero-top">
       <div>
@@ -361,7 +374,7 @@ function showTip(html, ev) {
   tip.style.left = x + 'px'; tip.style.top = y + 'px';
 }
 const hideTip = () => { tip.style.display = 'none'; };
-function toast(msg) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', 3500); }
+function toast(msg, ms = 3500) { const t = $('toast'); t.textContent = msg; t.style.display = 'block'; clearTimeout(t._h); t._h = setTimeout(() => t.style.display = 'none', ms); }
 function niceMax(v) { if (!(v > 0)) return 1; const p = 10 ** Math.floor(Math.log10(v)); const m = v / p; return (m <= 1 ? 1 : m <= 2 ? 2 : m <= 2.5 ? 2.5 : m <= 5 ? 5 : 10) * p; }
 const empty = (el, msg) => { el.innerHTML = `<p class="empty">${msg}</p>`; };
 
@@ -437,7 +450,9 @@ function splitList(el, rows, colorVar = '--s1') {
 
 // ------------------------------------------------------------ état
 let D = null, ACC = 'fr', focusId = null, sortKey = 'poste_le', PRED = null, predReq = 0;
-try { const a = localStorage.getItem('stats-account'); if (a === 'fr' || a === 'en') ACC = a; } catch (e) {}
+let COMPTES = [{ id: 'fr', nom: 'ton compte', court: 'FR' }, { id: 'en', nom: '@vocly.en', court: 'EN' }], AJOUT = false;
+try { const a = localStorage.getItem('stats-account'); if (a) ACC = a; } catch (e) {}
+const accName = id => (COMPTES.find(c => c.id === id) || {}).nom || id;
 const SRC = { 'For You': 'Pour toi', 'Personal Profile': 'Profil', 'Search': 'Recherche', 'Follow': 'Abonnements', 'Direct Message': 'Messages', 'Sound': 'Son', 'Others': 'Autres' };
 const PAYS = { FR: 'France', BE: 'Belgique', CH: 'Suisse', CA: 'Canada', MA: 'Maroc', DZ: 'Algérie', TN: 'Tunisie', GB: 'Royaume-Uni', US: 'États-Unis', DE: 'Allemagne', BR: 'Brésil', ES: 'Espagne', IT: 'Italie', SN: 'Sénégal', CI: "Côte d'Ivoire", RE: 'La Réunion', LU: 'Luxembourg', CD: 'RD Congo', CM: 'Cameroun', MG: 'Madagascar', AU: 'Australie', NL: 'Pays-Bas', PT: 'Portugal', MX: 'Mexique', IN: 'Inde', PH: 'Philippines', NG: 'Nigeria', PK: 'Pakistan', ID: 'Indonésie', Others: 'Autres' };
 // pas de nom (posts pas encore nommés dans noms-posts.json) : le début de la description, sinon la date
@@ -669,16 +684,76 @@ window.redraw = function () {
 };
 addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTimeout(redraw, 150); });
 
-// ------------------------------------------------------------ compte FR / EN
-function markAcc() { $('accSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.a === ACC)); }
-$('accSeg').querySelectorAll('button').forEach(b => b.onclick = async () => {
-  if (b.dataset.a === ACC) return;
-  ACC = b.dataset.a;
+// ------------------------------------------------------------ comptes (FR / EN, ou liste modifiable dans la version partagée)
+function markAcc() {
+  $('accSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.a === ACC));
+  $('removeBtn').hidden = ACC === 'fr';
+}
+async function switchAcc(id) {
+  ACC = id;
   try { localStorage.setItem('stats-account', ACC); } catch (e) {}
   markAcc(); focusId = null; PRED = null;
   await loadRuns(); await loadData($('runSel').value);
-});
-markAcc();
+}
+function renderAccs() {
+  $('accSeg').innerHTML = COMPTES.map(c => `<button type="button" data-a="${esc(c.id)}" title="${esc(c.nom)}">${esc(c.court || cut(c.nom, 16))}</button>`).join('');
+  $('accSeg').hidden = COMPTES.length < 2;
+  $('accSeg').querySelectorAll('button').forEach(b => b.onclick = () => { if (b.dataset.a !== ACC) switchAcc(b.dataset.a); });
+  $('addAccBtn').hidden = $('accTools').hidden = !AJOUT;
+  markAcc();
+}
+async function loadAccs() {
+  try { const r = await (await fetch('/api/comptes')).json(); if (r.comptes?.length) { COMPTES = r.comptes; AJOUT = !!r.ajout; } } catch (e) {}
+  if (!COMPTES.some(c => c.id === ACC)) ACC = COMPTES[0].id;
+  renderAccs();
+}
+async function accPost(body) {
+  const r = await fetch('/api/comptes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) toast(d.error || 'Impossible');
+  return r.ok ? d : null;
+}
+let formMode = 'ajouter';
+function openForm(mode) {
+  formMode = mode;
+  $('menu').open = true; $('addAccForm').hidden = false;
+  $('addAccName').value = mode === 'renommer' ? accName(ACC) : '';
+  $('addAccSubmit').textContent = mode === 'renommer' ? 'Renommer' : 'Ajouter et se connecter';
+  setTimeout(() => $('addAccName').focus(), 50);
+}
+const openAdd = () => openForm('ajouter');
+$('addAccBtn').onclick = e => { e.stopPropagation(); openAdd(); };
+$('addAccOpen').onclick = openAdd;
+$('addAccForm').onsubmit = async e => {
+  e.preventDefault();
+  if (formMode === 'renommer') {
+    if (await accPost({ action: 'renommer', id: ACC, nom: $('addAccName').value })) {
+      $('addAccForm').hidden = true; $('menu').open = false; await loadAccs(); await loadData($('runSel').value);
+    }
+    return;
+  }
+  const d = await accPost({ action: 'ajouter', nom: $('addAccName').value });
+  if (!d) return;
+  $('addAccForm').hidden = true; $('menu').open = false;
+  await loadAccs(); await switchAcc(d.compte.id);
+  toast('Connecte-toi au compte dans la fenêtre qui s’ouvre, ferme-la, puis clique « Mettre à jour »', 9000);
+};
+$('reconBtn').onclick = async () => {
+  $('menu').open = false;
+  if (await accPost({ action: 'connecter', id: ACC })) toast('Connecte-toi dans la fenêtre qui s’ouvre, puis ferme-la', 7000);
+};
+$('renameBtn').onclick = () => openForm('renommer');
+$('removeBtn').onclick = async () => {
+  const b = $('removeBtn');
+  if (ACC === 'fr') return;
+  if (!b.dataset.sure) {  // 2e clic pour confirmer
+    b.dataset.sure = '1'; b.textContent = `Confirmer : retirer ${accName(ACC)}`;
+    setTimeout(() => { delete b.dataset.sure; b.textContent = 'Retirer ce compte'; }, 4000);
+    return;
+  }
+  delete b.dataset.sure; b.textContent = 'Retirer ce compte'; $('menu').open = false;
+  if (await accPost({ action: 'retirer', id: ACC })) { await loadAccs(); await switchAcc(COMPTES[0].id); toast('Compte retiré (ses relevés restent sur l’ordinateur)'); }
+};
 
 // ------------------------------------------------------------ données
 async function loadRuns(pick) {
@@ -691,9 +766,10 @@ async function loadRuns(pick) {
 async function loadData(run) {
   const res = await fetch('/api/data?account=' + ACC + (run ? '&run=' + encodeURIComponent(run) : ''));
   const d = await res.json();
+  $('layout').hidden = !res.ok;  // pas de relevé pour ce compte : rien d'un autre compte à l'écran
   if (!res.ok) {
     D = null;
-    $('status').textContent = ACC === 'en' ? 'Aucun relevé pour @vocly.en : connecte le compte (connecter-chrome-en.bat), puis clique « Mettre à jour ».' : d.error;
+    $('status').textContent = ACC !== 'fr' || AJOUT ? `Aucun relevé pour ${accName(ACC)} : connecte le compte (${AJOUT ? 'menu ⋯ > Reconnecter ce compte' : 'connecter-chrome-en.bat'}), puis clique « Mettre à jour ».` : d.error;
     return;
   }
   D = d;
@@ -701,7 +777,7 @@ async function loadData(run) {
   const at = new Date(D.at), mins = Math.round((Date.now() - at) / 60000);
   const ago = mins < 1 ? "à l'instant" : mins < 60 ? `il y a ${mins} min` : mins < 1440 ? `il y a ${Math.floor(mins / 60)} h` : `il y a ${Math.floor(mins / 1440)} j`;
   const old = $('runSel').selectedIndex > 0 ? ' · <b>ancien relevé</b>' : '';
-  $('status').innerHTML = `${ACC === 'fr' ? 'ton compte' : '@vocly.en'} · stats relevées <b>${ago}</b>${old}`;
+  $('status').innerHTML = `${esc(accName(ACC))} · stats relevées <b>${ago}</b>${old}`;
   redraw();
 }
 $('runSel').onchange = () => { $('menu').open = false; loadData($('runSel').value); };
@@ -726,7 +802,7 @@ function showJob(j) {
   box.hidden = false;
   if (j.running) box.innerHTML = `<div class="note">Relevé en cours… ${secs} s</div>`;
   else if (j.code === 0) box.hidden = true;
-  else box.innerHTML = `<div class="note bad" style="margin-bottom:14px">Le relevé n'a pas marché. Si TikTok demande une vérification, lance <code>python scrap_stats.py --headed</code> dans tiktok-auto.<pre>${log}</pre></div>`;
+  else box.innerHTML = `<div class="note bad" style="margin-bottom:14px">Le relevé n'a pas marché. ${AJOUT ? 'Si le compte n’est pas connecté ou si TikTok demande une vérification : menu ⋯ > Reconnecter ce compte.' : 'Si TikTok demande une vérification, lance <code>python scrap_stats.py --headed</code> dans tiktok-auto.'}<pre>${log}</pre></div>`;
 }
 const idleBtn = () => { $('refreshBtn').disabled = false; $('refreshBtn').innerHTML = '↻ <span class="upd-label">Mettre à jour</span>'; };
 async function watch() {
@@ -748,7 +824,7 @@ $('refreshBtn').onclick = async () => {
 
 (async () => {
   try {
-    await loadRuns(); await loadData($('runSel').value);
+    await loadAccs(); await loadRuns(); await loadData($('runSel').value);
     const j = await (await fetch('/api/refresh')).json();
     if (j.running) { $('refreshBtn').disabled = true; poll = null; watch(); }
   } catch (e) { $('status').textContent = 'Le serveur ne répond pas : relance « Stats TikTok ».'; }

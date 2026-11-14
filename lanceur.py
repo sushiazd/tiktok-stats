@@ -35,7 +35,7 @@ else:
 VENV = SUPPORT / "venv"
 PROFIL = SUPPORT / "chrome-profil"
 # Jamais écrasé par une mise à jour : les relevés et les réglages de la personne.
-A_GARDER = {"stats-out", "maj-url.txt", ".version"}
+A_GARDER = {"stats-out", "maj-url.txt", ".version", "comptes.json"}
 SI_ABSENT = {"noms-posts.json"}
 
 try:
@@ -89,7 +89,7 @@ def mettre_a_jour():
         if info.is_dir() or len(parts) < 2:
             continue
         rel = Path(*parts[1:])  # on enlève le dossier racine du zip
-        if rel.parts[0] in A_GARDER or ".." in rel.parts:
+        if rel.parts[0] in A_GARDER or rel.parts[0].startswith("stats-out") or ".." in rel.parts:
             continue
         cible = ICI / rel
         if rel.name in SI_ABSENT and cible.exists():
@@ -131,6 +131,7 @@ def env():
     e = dict(os.environ)
     e.update({
         "TIKTOK_STATS_PROFIL": str(PROFIL),
+        "TIKTOK_STATS_COMPTES": str(ICI / "comptes.json"),  # liste des comptes (bouton « + » dans la fenêtre)
         "TIKTOK_STATS_NAVIGATEUR": "chrome" if chrome_installe() else "",
         "TIKTOK_STATS_CLOUD": "",
         "TIKTOK_STATS_CONNEXION": "lance « Connecter mon compte »",

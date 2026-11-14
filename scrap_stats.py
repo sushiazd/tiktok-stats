@@ -46,14 +46,12 @@ from predict import interp, real_age_points
 
 sys.stdout.reconfigure(encoding="utf-8", errors="replace")
 
-# Un profil Chrome et un dossier de relevés par compte : fr = @vocly.app (historique), en = @vocly.en.
-ACCOUNTS = {"fr": ("vocly-tiktok-chrome", "stats-out"), "en": ("vocly-tiktok-chrome-en", "stats-out-en")}
-_LOCAL = Path(os.environ.get("LOCALAPPDATA", Path.home()))
-# Version partagée (Mac du pote) : le lanceur fixe le profil, le navigateur et le message de connexion.
-_PROFIL_IMPOSE = os.environ.get("TIKTOK_STATS_PROFIL")
+# Un profil Chrome et un dossier de relevés par compte (comptes.py) : fr = @vocly.app (historique), en = @vocly.en.
+import comptes  # noqa: E402
+# Version partagée : le lanceur fixe aussi le navigateur et le message de connexion.
 NAVIGATEUR = os.environ.get("TIKTOK_STATS_NAVIGATEUR", "chrome") or None  # vide = Chromium de Playwright
 CONNEXION = os.environ.get("TIKTOK_STATS_CONNEXION", "lance « node login.mjs » dans tiktok-auto")
-PROFILE = Path(_PROFIL_IMPOSE) if _PROFIL_IMPOSE else _LOCAL / ACCOUNTS["fr"][0]
+PROFILE = comptes.profil("fr")
 STUDIO = "https://www.tiktok.com/tiktokstudio"
 HERE = Path(__file__).resolve().parent
 
@@ -498,16 +496,18 @@ def main():
     g.add_argument("--last", type=int, default=6, help="nombre de derniers posts (défaut 6)")
     g.add_argument("--all", action="store_true", help="tous les posts")
     g.add_argument("--ids", help="IDs séparés par des virgules")
-    ap.add_argument("--account", choices=sorted(ACCOUNTS), default="fr", help="fr = @vocly.app, en = @vocly.en")
+    ap.add_argument("--account", default="fr", help="fr = @vocly.app, en = @vocly.en (version partagée : fr, c2, c3...)")
     ap.add_argument("--no-compte", action="store_true", help="ne pas relever les stats du compte")
     ap.add_argument("--headed", action="store_true", help="Chrome visible")
     ap.add_argument("--out", help="dossier de sortie (défaut stats-out/<date_heure>)")
     a = ap.parse_args()
 
     global PROFILE
-    PROFILE = Path(_PROFIL_IMPOSE) if _PROFIL_IMPOSE else _LOCAL / ACCOUNTS[a.account][0]
+    if not comptes.existe(a.account):
+        sys.exit(f"Compte inconnu : {a.account} (comptes : {', '.join(c['id'] for c in comptes.liste())})")
+    PROFILE = comptes.profil(a.account)
     now = datetime.now()
-    out = Path(a.out) if a.out else HERE / ACCOUNTS[a.account][1] / now.strftime("%Y-%m-%d_%Hh%M")
+    out = Path(a.out) if a.out else comptes.sortie(a.account) / now.strftime("%Y-%m-%d_%Hh%M")
     (out / "raw").mkdir(parents=True, exist_ok=True)
     t_start = time.time()
 

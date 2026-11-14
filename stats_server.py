@@ -20,22 +20,28 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 PAGE = HERE / "stats-page"
-OUTS = {"fr": HERE / "stats-out", "en": HERE / "stats-out-en"}
-OUT = OUTS["fr"]  # compte par défaut (predict.py ne lit que celui-ci)
+sys.path.insert(0, str(HERE))
+import comptes  # noqa: E402  (liste des comptes, profil et dossier de relevés de chacun)
+
+OUT = comptes.sortie("fr")  # compte par défaut (predict.py ne lit que celui-ci)
+
+
+def out_of(acc: str) -> Path:
+    return comptes.sortie(acc if comptes.existe(acc) else "fr")
 
 job = {"running": False, "lines": [], "code": None, "started": None, "ended": None, "args": []}
 lock = threading.Lock()
 
 
 def runs(acc: str = "fr") -> list[dict]:
-    OUT = OUTS.get(acc, OUTS["fr"])
+    OUT = out_of(acc)
     items = [p for p in OUT.iterdir() if p.is_dir() and (p / "tout.json").exists()] if OUT.exists() else []
     items.sort(key=lambda p: p.name, reverse=True)
     return [{"name": p.name} for p in items]
 
 
 def complete_auto(d: dict, acc: str = "fr"):
-    OUT = OUTS.get(acc, OUTS["fr"])
+    OUT = out_of(acc)
     """Un relevé automatique ne contient que les 4 derniers posts, sans le compte : on complète avec
     les autres posts et le compte tels que vus dans leur relevé le plus récent."""
     have = {p["id"] for p in d.get("summary", [])}
@@ -118,12 +124,15 @@ class Handler(BaseHTTPRequestHandler):
         path, _, query = self.path.partition("?")
         params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
         acc = params.get("account", "fr")
-        acc = acc if acc in OUTS else "fr"
+        acc = acc if comptes.existe(acc) else "fr"
+        if path == "/api/comptes":
+            return self.json({"comptes": [{k: c.get(k) for k in ("id", "nom", "court")} for c in comptes.liste()],
+                              "ajout": comptes.modifiable()})
         if path == "/api/runs":
             return self.json(runs(acc))
         if path == "/api/data":
             name = params.get("run") or (runs(acc)[0]["name"] if runs(acc) else "")
-            f = OUTS[acc] / Path(name).name / "tout.json"  # .name : pas de ../
+            f = out_of(acc) / Path(name).name / "tout.json"  # .name : pas de ../
             if not name or not f.exists():
                 return self.json({"error": "Aucun relevé : clique sur « Mettre à jour »."}, 404)
             d = json.loads(f.read_text("utf-8"))
@@ -163,20 +172,42 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, f.read_bytes(), ctype + "; charset=utf-8")
 
     def do_POST(self):
-        if self.path != "/api/refresh" or not self.same_origin():
+        if self.path not in ("/api/refresh", "/api/comptes") or not self.same_origin():
             return self.json({"error": "refusé"}, 403)
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
         except Exception:
             body = {}
+        if self.path == "/api/comptes":
+            return self.comptes_post(body)
         n = body.get("n", 6)
         args = ["--all"] if n == "all" else ["--last", str(max(1, min(int(n), 200)))]
         if body.get("compte") is False:
             args.append("--no-compte")
         acc = body.get("account", "fr")
-        if not start_refresh(args, acc if acc in OUTS else "fr"):
+        if not start_refresh(args, acc if comptes.existe(acc) else "fr"):
             return self.json({"error": "Un relevé est déjà en cours."}, 409)
         self.json({"ok": True})
+
+    def comptes_post(self, body: dict):
+        """Ajouter, reconnecter, renommer ou retirer un compte (version partagée seulement)."""
+        action, cid = body.get("action"), body.get("id", "")
+        if action == "connecter" and comptes.existe(cid):
+            comptes.connecter(cid)
+            return self.json({"ok": True})
+        if not comptes.modifiable():
+            return self.json({"error": "La liste des comptes n'est pas modifiable ici."}, 403)
+        if action == "ajouter":
+            c = comptes.ajouter(str(body.get("nom", "")))
+            comptes.connecter(c["id"])
+            return self.json({"ok": True, "compte": c})
+        if action == "renommer" and comptes.existe(cid):
+            comptes.renommer(cid, str(body.get("nom", "")))
+            return self.json({"ok": True})
+        if action == "retirer" and comptes.existe(cid) and cid != "fr":
+            comptes.retirer(cid)
+            return self.json({"ok": True})
+        return self.json({"error": "Action inconnue."}, 400)
 
 
 def main():
