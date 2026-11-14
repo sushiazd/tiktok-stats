@@ -1,6 +1,8 @@
 """Lanceur de Stats TikTok (version partagée, Windows et Mac).
 
 Appelé par « Stats TikTok » (.bat sous Windows, .command sur Mac), ou « Connecter mon compte » (--connecter).
+Au premier lancement, crée l'app « Stats TikTok » (Mac : dans le dossier et dans Applications ;
+Windows : raccourci sur le Bureau), qui relance ce fichier avec --fenetre, sans terminal.
 1. Met à jour les fichiers depuis le lien de maj-url.txt (si présent), sans toucher aux relevés.
 2. Prépare un environnement Python à part avec Playwright (une seule fois).
 3. Connexion TikTok (première fois, ou avec --connecter), puis ouvre la page de stats.
@@ -22,11 +24,13 @@ ICI = Path(__file__).resolve().parent
 if WINDOWS:
     SUPPORT = Path(os.environ.get("LOCALAPPDATA", Path.home())) / "TikTok Stats"
     PY = SUPPORT / "venv" / "Scripts" / "python.exe"
+    PYW = SUPPORT / "venv" / "Scripts" / "pythonw.exe"
     CHROMES = [Path(os.environ.get(v, "")) / "Google" / "Chrome" / "Application" / "chrome.exe"
                for v in ("PROGRAMFILES", "PROGRAMFILES(X86)", "LOCALAPPDATA") if os.environ.get(v)]
 else:
     SUPPORT = Path.home() / "Library" / "Application Support" / "TikTok Stats"
     PY = SUPPORT / "venv" / "bin" / "python"
+    PYW = PY
     CHROMES = [Path("/Applications/Google Chrome.app"), Path.home() / "Applications" / "Google Chrome.app"]
 VENV = SUPPORT / "venv"
 PROFIL = SUPPORT / "chrome-profil"
@@ -111,6 +115,10 @@ def installer():
         subprocess.check_call([str(PY), "-m", "pip", "install", "-q", "playwright"])
     elif subprocess.run([str(PY), "-c", "import playwright"], capture_output=True).returncode:
         subprocess.check_call([str(PY), "-m", "pip", "install", "-q", "playwright"])
+    if subprocess.run([str(PY), "-c", "import webview"], capture_output=True).returncode:
+        dire("Installation de la fenêtre de l'app...")
+        if subprocess.run([str(PY), "-m", "pip", "install", "-q", "pywebview"]).returncode:
+            dire("Fenêtre indisponible : les stats s'ouvriront dans le navigateur.")
     if not chrome_installe():
         marque = SUPPORT / ".chromium-ok"
         if not marque.exists():
@@ -126,6 +134,7 @@ def env():
         "TIKTOK_STATS_NAVIGATEUR": "chrome" if chrome_installe() else "",
         "TIKTOK_STATS_CLOUD": "",
         "TIKTOK_STATS_CONNEXION": "lance « Connecter mon compte »",
+        "TIKTOK_STATS_SUPPORT": str(SUPPORT),
         "PYTHONIOENCODING": "utf-8",
     })
     return e
@@ -155,25 +164,88 @@ def connecter():
     subprocess.call([str(PY), "-c", CONNEXION], env=env())
 
 
+PLIST = """<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+<key>CFBundleName</key><string>Stats TikTok</string>
+<key>CFBundleDisplayName</key><string>Stats TikTok</string>
+<key>CFBundleIdentifier</key><string>local.stats-tiktok</string>
+<key>CFBundleExecutable</key><string>stats-tiktok</string>
+<key>CFBundlePackageType</key><string>APPL</string>
+<key>CFBundleVersion</key><string>1</string>
+<key>LSMinimumSystemVersion</key><string>10.13</string>
+<key>NSHighResolutionCapable</key><true/>
+</dict></plist>
+"""
+
+
+def creer_app():
+    """L'app « Stats TikTok » qui ouvre directement la fenêtre, sans terminal.
+    Créée ici (et non téléchargée) : macOS ne la bloque pas et la lance depuis sa vraie place."""
+    lanceur = ICI / "lanceur.py"
+    journal = SUPPORT / "stats.log"
+    if WINDOWS:
+        marque = SUPPORT / ".raccourci"
+        if marque.exists() and marque.read_text("utf-8") == str(ICI):
+            return
+        q = lambda x: str(x).replace("'", "''")
+        ps = ("$d=[Environment]::GetFolderPath('Desktop');"
+              "$s=(New-Object -ComObject WScript.Shell).CreateShortcut((Join-Path $d 'Stats TikTok.lnk'));"
+              f"$s.TargetPath='{q(Path(sys.executable).with_name('pythonw.exe'))}';"
+              f"$s.Arguments='\"{q(lanceur)}\" --fenetre';$s.WorkingDirectory='{q(ICI)}';$s.Save()")
+        if subprocess.run(["powershell", "-NoProfile", "-Command", ps], capture_output=True).returncode == 0:
+            marque.write_text(str(ICI), "utf-8")
+            dire("Raccourci « Stats TikTok » ajouté sur ton Bureau : la prochaine fois, ouvre-le directement.")
+        return
+    script = (f'#!/bin/bash\ncd "{ICI}"\n'
+              f'exec "{sys.executable}" "{lanceur}" --fenetre >> "{journal}" 2>&1\n')
+    for base in (ICI, Path.home() / "Applications"):
+        app = base / "Stats TikTok.app"
+        exe = app / "Contents" / "MacOS" / "stats-tiktok"
+        if exe.exists() and exe.read_text("utf-8") == script:
+            continue
+        try:
+            exe.parent.mkdir(parents=True, exist_ok=True)
+            exe.write_text(script, "utf-8")
+            exe.chmod(0o755)
+            (app / "Contents" / "Info.plist").write_text(PLIST, "utf-8")
+            dire(f"App « Stats TikTok » créée dans {base} : la prochaine fois, ouvre-la directement"
+                 " (tu peux la glisser dans le Dock).")
+        except OSError:
+            pass
+
+
+def ouvrir():
+    """La fenêtre des stats (repli : la page dans le navigateur)."""
+    py = PYW if "--fenetre" in sys.argv and PYW.exists() else PY
+    subprocess.call([str(py), str(ICI / "fenetre.py")], cwd=str(ICI), env=env())
+
+
 def connecte():
     return any((PROFIL / "Default" / p).exists() for p in ("Cookies", "Network/Cookies"))
 
 
 def main():
     args = sys.argv[1:]
+    if sys.stdout is None:  # pythonw (raccourci Windows) : pas de console, tout va dans le journal
+        SUPPORT.mkdir(parents=True, exist_ok=True)
+        sys.stdout = sys.stderr = open(SUPPORT / "stats.log", "a", encoding="utf-8")
     if "--deja-maj" not in args and mettre_a_jour():
         # Le lanceur lui-même a changé : on relance la nouvelle version.
         sys.exit(subprocess.call([sys.executable, str(ICI / "lanceur.py"), *args, "--deja-maj"]))
     installer()
+    if "--fenetre" in args:  # lancé par l'app, sans terminal : pas de questions, on ouvre
+        ouvrir()
+        return
+    creer_app()
     if "--connecter" in args or not connecte():
         connecter()
         if "--connecter" in args:
             dire("C'est fait. Tu peux maintenant ouvrir « Stats TikTok ».")
             return
     dire("")
-    dire("La page des stats s'ouvre dans ton navigateur. Clique « Mettre à jour » pour un nouveau relevé.")
-    dire("Laisse cette fenêtre ouverte tant que tu regardes la page ; ferme-la pour tout arrêter.")
-    subprocess.call([str(PY), str(ICI / "stats_server.py")], cwd=str(ICI), env=env())
+    dire("La fenêtre des stats s'ouvre. Clique « Mettre à jour » pour un nouveau relevé.")
+    ouvrir()
 
 
 if __name__ == "__main__":
