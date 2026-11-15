@@ -56,6 +56,22 @@ PLUSIEURS COMPTES
 - La prévision des vues à 48 h ne marche que pour le premier compte.
 
 
+ROBOT EN LIGNE (OPTIONNEL)
+--------------------------
+Sans robot, l'outil ne voit tes posts que quand tu cliques « Mettre à jour ». Le robot les relève
+tout seul toutes les heures (vues, likes, favoris, partages, commentaires), même ordinateur éteint :
+la prévision des vues à 48 h est alors bien plus juste.
+Il tourne gratuitement sur TON compte Cloudflare et lit seulement les pages publiques de tes posts
+(aucun mot de passe TikTok).
+1. Installe Node.js (gratuit, version « LTS ») : https://nodejs.org/fr/download
+2. Lance « Installer le robot » (Mac : clic droit > Ouvrir la première fois ; Windows : double-clic).
+3. Donne le nom de ton compte TikTok (celui de l'adresse tiktok.com/@NOM, sans @). Plusieurs
+   comptes : sépare-les par des virgules.
+4. Une page Cloudflare s'ouvre : crée un compte gratuit (ou connecte-toi), clique « Allow ».
+5. C'est fini : l'outil s'en sert tout seul. Relance « Installer le robot » pour changer les comptes
+   suivis. Le robot suit les posts de moins de 7 jours.
+
+
 SI ÇA BLOQUE
 ------------
 - « Pas connecté à TikTok » : lance « Connecter mon compte » et reconnecte-toi.

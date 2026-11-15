@@ -35,7 +35,7 @@ else:
 VENV = SUPPORT / "venv"
 PROFIL = SUPPORT / "chrome-profil"
 # Jamais écrasé par une mise à jour : les relevés et les réglages de la personne.
-A_GARDER = {"stats-out", "maj-url.txt", ".version", "comptes.json"}
+A_GARDER = {"stats-out", "maj-url.txt", ".version", "comptes.json", "robot-url.txt"}
 SI_ABSENT = {"noms-posts.json"}
 
 try:
@@ -127,13 +127,19 @@ def installer():
             marque.write_text("ok")
 
 
+def robot():
+    """Adresse du robot de relevé en ligne de la personne (« Installer le robot »), sinon vide."""
+    f = ICI / "robot-url.txt"
+    return f.read_text("utf-8").strip() if f.exists() else ""
+
+
 def env():
     e = dict(os.environ)
     e.update({
         "TIKTOK_STATS_PROFIL": str(PROFIL),
         "TIKTOK_STATS_COMPTES": str(ICI / "comptes.json"),  # liste des comptes (bouton « + » dans la fenêtre)
         "TIKTOK_STATS_NAVIGATEUR": "chrome" if chrome_installe() else "",
-        "TIKTOK_STATS_CLOUD": "",
+        "TIKTOK_STATS_CLOUD": robot(),
         "TIKTOK_STATS_CONNEXION": "lance « Connecter mon compte »",
         "TIKTOK_STATS_SUPPORT": str(SUPPORT),
         "PYTHONIOENCODING": "utf-8",
