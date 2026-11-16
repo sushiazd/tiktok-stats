@@ -523,9 +523,8 @@ function renderPredNumbers(p) {
   const P = PRED && PRED._id === p.id ? PRED : null, T = P?.post, pv = P?.prevision;
   $('waveAlert').hidden = true;
   const set = (k, v, d) => { $('nPredK').textContent = k; $('nPred').textContent = v; $('nPredD').innerHTML = d; };
-  $('nPred').parentElement.hidden = ACC !== 'fr' && p.age_h < 48;
   if (p.age_h >= 48)return set('Vues à 48 h', short(p.vues_48h ?? viewsAtAge(p, 48)), 'chiffre réel');
-  if (!P) return set('Prévu à 48 h', '…', ACC === 'fr' ? 'calcul en cours' : 'prévision : compte FR seulement');
+  if (!P) return set('Prévu à 48 h', '…', 'calcul en cours');
   if (P.error) return set('Prévu à 48 h', '–', esc(P.error));
   if (!T) return set('Prévu à 48 h', '–', 'pas assez de données sur ce post');
   if (T.fini) return set('Vues à 48 h', short(T.reel), 'chiffre réel');
@@ -648,7 +647,7 @@ function renderMore() {
 
   // fiabilité de la prévision
   const P = PRED && PRED._id === p.id && !PRED.error ? PRED : null;
-  if (!P) { $('predHow').textContent = ACC === 'fr' ? 'Chargement…' : 'La prévision ne marche que pour le compte FR pour l’instant.'; $('backTbl').innerHTML = ''; return; }
+  if (!P) { $('predHow').textContent = PRED?.error ? 'Prévision indisponible : ' + PRED.error : 'Chargement…'; $('backTbl').innerHTML = ''; return; }
   const k = P.fiabilite?.[3]?.k, k12 = P.fiabilite?.[12]?.k;
   const pct = x => fmt((x - 1) * 100) + ' %';
   $('predHow').textContent = `On a refait la prévision sur tes anciens posts, comme si on ne connaissait pas la suite. ` +
@@ -660,17 +659,16 @@ function renderMore() {
     P.test.map(t => `<tr><td>${esc(t.nom)}${t.vague ? ' <span class="muted">· 2e vague</span>' : ''}</td><td>${t.approx ? '≈ ' : ''}${fmt(t.reel)}</td>${BA.map(a => `<td>${cell(t.at[a])}</td>`).join('')}</tr>`).join('') + '</tbody>' : '';
 }
 
-// ------------------------------------------------------------ prévision (predict.py, compte FR)
+// ------------------------------------------------------------ prévision (predict.py, compte affiché)
 async function loadPrediction() {
   const p = focusPost(); if (!p) return;
   if (PRED && PRED._id === p.id && PRED._run === D.run) return;
-  if (ACC !== 'fr') { PRED = { _id: p.id, _run: D.run, error: 'prévision : compte FR seulement' }; return; }
   const req = ++predReq;
   PRED = null;
   try {
-    const r = await fetch('/api/prediction?account=fr&id=' + encodeURIComponent(p.id));
+    const acc = ACC, r = await fetch('/api/prediction?account=' + encodeURIComponent(acc) + '&id=' + encodeURIComponent(p.id));
     const P = await r.json();
-    if (req !== predReq) return;
+    if (req !== predReq || acc !== ACC) return;
     PRED = r.ok ? P : { error: P.error || 'indisponible' };
   } catch (e) { if (req !== predReq) return; PRED = { error: 'indisponible' }; }
   Object.assign(PRED, { _id: p.id, _run: D.run });

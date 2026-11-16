@@ -2,7 +2,7 @@
 
 Chez le propriétaire (rien de réglé) : les deux comptes fixes, fr = @vocly.app et en = @vocly.en.
 Version partagée (lanceur.py règle TIKTOK_STATS_COMPTES) : une liste modifiable dans comptes.json,
-le premier compte a l'identifiant « fr » (la prévision des vues ne marche que pour lui), les suivants c2, c3...
+le premier compte a l'identifiant « fr », les suivants c2, c3... (prévision des vues pour chacun)
 """
 from __future__ import annotations
 

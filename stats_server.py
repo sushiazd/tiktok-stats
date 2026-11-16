@@ -23,7 +23,7 @@ PAGE = HERE / "stats-page"
 sys.path.insert(0, str(HERE))
 import comptes  # noqa: E402  (liste des comptes, profil et dossier de relevés de chacun)
 
-OUT = comptes.sortie("fr")  # compte par défaut (predict.py ne lit que celui-ci)
+OUT = comptes.sortie("fr")  # compte par défaut
 
 
 def out_of(acc: str) -> Path:
@@ -141,13 +141,11 @@ class Handler(BaseHTTPRequestHandler):
                 complete_auto(d, acc)
             import predict
             return self.json(predict.add_real_age(d))
-        if path in ("/api/history", "/api/prediction") and acc != "fr":
-            return self.json({"error": "Les prédictions ne sont disponibles que pour le compte FR pour l'instant."}, 404)
         if path == "/api/history":  # chaque post, tel que vu dans son relevé le plus récent (sert aux prédictions)
             posts: dict = {}
-            for r in reversed(runs()):  # du plus ancien au plus récent : le plus récent écrase
+            for r in reversed(runs(acc)):  # du plus ancien au plus récent : le plus récent écrase
                 try:
-                    d = json.loads((OUT / r["name"] / "tout.json").read_text("utf-8"))
+                    d = json.loads((out_of(acc) / r["name"] / "tout.json").read_text("utf-8"))
                 except Exception:
                     continue
                 for p in d.get("summary", []):
@@ -157,7 +155,7 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/prediction":  # calcul dans predict.py (tous les relevés, test sur les anciens posts)
             try:
                 import predict
-                return self.json(predict.prediction(params.get("id")))
+                return self.json(predict.prediction(params.get("id"), acc))
             except Exception as e:
                 return self.json({"error": f"Prédiction indisponible : {e}"}, 500)
         if path == "/api/refresh":

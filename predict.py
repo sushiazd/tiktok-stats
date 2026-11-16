@@ -3,8 +3,9 @@ Prédiction des vues d'un post TikTok à 48 h, à partir de ses premières heure
 
     python predict.py              # test à l'aveugle : chaque post est prédit avec les posts sortis avant lui
     python predict.py --json ID    # ce que lit la page pour ce post (stats_server.py -> /api/prediction)
+    python predict.py --compte en  # même chose pour un autre compte
 
-Données : TOUS les relevés de stats-out/, fusionnés post par post en une seule courbe, à l'âge réel et croissante.
+Données : TOUS les relevés du compte (stats-out/ pour FR, stats-out-en/ pour EN...), fusionnés post par post en une seule courbe, à l'âge réel et croissante.
 TikTok ne donne l'heure par heure que pendant ~48 h : chaque relevé fait dans ces 48 h est gardé.
 
 Méthode (voir forecast) :
@@ -30,7 +31,14 @@ from datetime import datetime
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
-OUT = HERE / "stats-out"
+sys.path.insert(0, str(HERE))
+import comptes  # noqa: E402  (dossier de relevés de chaque compte)
+
+OUT = comptes.sortie("fr")  # compte par défaut ; chaque fonction prend acc= pour les autres comptes
+
+
+def out_dir(acc: str = "fr") -> Path:
+    return comptes.sortie(acc if comptes.existe(acc) else "fr")
 HORIZON = 48
 MIN_AGE = 2  # avant 2 h (1re heure partielle), on n'affiche pas de chiffre
 IMPUTE_MIN = 24  # un post de 24 à 48 h compte déjà dans le test : son reste jusqu'à 48 h est estimé (« ≈ »)
@@ -108,8 +116,9 @@ def load_raw(f: Path) -> dict | None:
     return d
 
 
-def data_stamp() -> float:
-    files = list(OUT.rglob("post-*.json")) + ([CLOUD_FILE] if CLOUD_FILE.exists() else [])
+def data_stamp(acc: str = "fr") -> float:
+    cf = cloud_file(acc)
+    files = list(out_dir(acc).rglob("post-*.json")) + ([cf] if cf and cf.exists() else [])
     return max((f.stat().st_mtime for f in files), default=0)
 
 
@@ -122,9 +131,14 @@ CLOUD_FILE = OUT / "cloud-snaps.jsonl"
 CLOUD_STATE: dict = {"t": 0}
 
 
-def sync_cloud(min_gap: float = 300):
+def cloud_file(acc: str = "fr") -> Path | None:
+    """Le robot en ligne ne suit que le compte principal : pas de copie en ligne pour les autres comptes."""
+    return CLOUD_FILE if acc == "fr" else None
+
+
+def sync_cloud(min_gap: float = 300, acc: str = "fr"):
     """Récupère les nouveaux relevés en ligne et signale au robot les posts récents qu'il ne suit pas encore."""
-    if not CLOUD or time.time() - CLOUD_STATE["t"] < min_gap:
+    if not CLOUD or acc != "fr" or time.time() - CLOUD_STATE["t"] < min_gap:
         return
     CLOUD_STATE["t"] = time.time()
     import urllib.request
@@ -156,11 +170,12 @@ def sync_cloud(min_gap: float = 300):
         CLOUD_STATE.update(err=str(e)[:200])
 
 
-def cloud_items() -> list[dict]:
+def cloud_items(acc: str = "fr") -> list[dict]:
     out = []
-    if not CLOUD_FILE.exists():
+    cf = cloud_file(acc)
+    if not cf or not cf.exists():
         return out
-    for line in CLOUD_FILE.read_text("utf-8").splitlines():
+    for line in cf.read_text("utf-8").splitlines():
         try:
             s = json.loads(line)
         except Exception:
@@ -177,9 +192,10 @@ KEEP = ["realtime_total_video_views", "realtime_video_view_history", "realtime_f
 _RAW: dict = {}  # fichier -> (date de modif, données utiles) : chaque fichier n'est lu qu'une fois
 
 
-def scan() -> list[dict]:
+def scan(acc: str = "fr") -> list[dict]:
     """Tous les fichiers de relevé de post, avec l'heure et le nom du relevé dont ils viennent."""
     items = []
+    OUT = out_dir(acc)
     for f in OUT.rglob("post-*.json"):
         if not re.fullmatch(r"post-\d{17,}\.json", f.name):
             continue
@@ -196,7 +212,7 @@ def scan() -> list[dict]:
             continue
         folder = f.parent.parent if f.parent.name == "raw" else f.parent
         items.append({"pid": f.stem[5:], "at": snap_time(f), "mt": mt, "releve": folder.name if folder != OUT else "racine", "d": c[1]})
-    return items + cloud_items()
+    return items + cloud_items(acc)
 
 
 # ---------------------------------------------------------------- la courbe d'un post
@@ -539,16 +555,20 @@ def after48(order) -> dict | None:
 # Une ligne par post et par relevé : ce que l'outil prévoyait à ce moment-là. Quand le post atteint 48 h, on compare.
 # Le fichier garde aussi les prédictions des anciennes méthodes (version < MODEL_VERSION) : elles ne comptent plus.
 
-JOURNAL = OUT / "journal-predictions.jsonl"
+JOURNAL = OUT / "journal-predictions.jsonl"  # compte FR (journal_file(acc) pour les autres)
 MODEL_VERSION = 3
 _LOCK = threading.Lock()
 JOURNAL_AGES = [(2, 6), (6, 12), (12, 24), (24, 48)]
 
 
-def read_journal() -> list[dict]:
+def journal_file(acc: str = "fr") -> Path:
+    return out_dir(acc) / "journal-predictions.jsonl"
+
+
+def read_journal(acc: str = "fr") -> list[dict]:
     out = []
     try:
-        for line in JOURNAL.read_text("utf-8").splitlines():
+        for line in journal_file(acc).read_text("utf-8").splitlines():
             try:
                 out.append(json.loads(line))
             except Exception:
@@ -558,8 +578,9 @@ def read_journal() -> list[dict]:
     return out
 
 
-def update_journal(items) -> list[dict]:
-    J = read_journal()
+def update_journal(items, acc: str = "fr") -> list[dict]:
+    OUT = out_dir(acc)
+    J = read_journal(acc)
     done = {e["releve"] for e in J if e.get("type") == "releve"}
     groups: dict = {}
     for it in items:
@@ -585,7 +606,7 @@ def update_journal(items) -> list[dict]:
                             "vague": pr["vague"], "rejoue": replay, "version": MODEL_VERSION, "ecrit": now})
         new.append({"type": "releve", "releve": g["releve"], "at": g["at"], "rejoue": replay, "ecrit": now})
     if new:
-        with open(JOURNAL, "a", encoding="utf-8") as f:
+        with open(journal_file(acc), "a", encoding="utf-8") as f:
             for e in new:
                 f.write(json.dumps(e, ensure_ascii=False) + "\n")
     return [e for e in J + new if e.get("type") == "prediction"]
@@ -617,23 +638,25 @@ def journal_view(J, posts) -> dict:
 
 # ---------------------------------------------------------------- ce que lit la page
 
-_CACHE: dict = {}
+_CACHES: dict = {}  # compte -> dernier calcul
 
 
-def model():
+def model(acc: str = "fr"):
+    acc = acc if comptes.existe(acc) else "fr"
     with _LOCK:
-        sync_cloud()
-        stamp = data_stamp()
-        if _CACHE.get("stamp") != stamp:
-            items = scan()
-            J = update_journal(items)
+        sync_cloud(acc=acc)
+        stamp = data_stamp(acc)
+        C = _CACHES.setdefault(acc, {})
+        if C.get("stamp") != stamp:
+            items = scan(acc)
+            J = update_journal(items, acc)
             posts = load_posts(items=items)
-            _CACHE.update(stamp=stamp, posts=posts, journal=J, ev=evaluate(posts))
-        return _CACHE["posts"], _CACHE["ev"], _CACHE["journal"]
+            C.update(stamp=stamp, posts=posts, journal=J, ev=evaluate(posts))
+        return C["posts"], C["ev"], C["journal"]
 
 
-def prediction(pid: str | None):
-    posts, ev, J = model()
+def prediction(pid: str | None, acc: str = "fr"):
+    posts, ev, J = model(acc)
     N = names()
     nm = lambda P: N.get(P["id"], "") or datetime.fromtimestamp(P["t0"]).strftime("%d/%m %Hh%M")
     order = ev["order"]
@@ -650,7 +673,8 @@ def prediction(pid: str | None):
         "horizon": HORIZON, "fiabilite": ev["band"], "test": test[:ERR_POSTS],
         "vagues": {"nb": wv["nb"], "sur": wv["sur"], "noms": [nm(P).split(" · ")[0] for P in wv["posts"]]},
         "apres48": after48(order), "journal": journal_view(J, posts),
-        "en_ligne": {"url": CLOUD, "derniers": CLOUD_STATE.get("runs") or [], "erreur": CLOUD_STATE.get("err")},
+        "en_ligne": {"url": CLOUD if acc == "fr" else "", "derniers": (CLOUD_STATE.get("runs") or []) if acc == "fr" else [],
+                     "erreur": CLOUD_STATE.get("err") if acc == "fr" else None},
     }
     T = posts.get(pid or "")
     if not T:
@@ -687,10 +711,10 @@ def prediction(pid: str | None):
 
 # ---------------------------------------------------------------- rapport console
 
-def report():
+def report(acc: str = "fr"):
     sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     N = names()
-    posts, ev, J = model()
+    posts, ev, J = model(acc)
     print("Test à l'aveugle : prévu / réel à 48 h, chaque post prédit avec les posts sortis avant lui (≈ : cible estimée)")
     print("post".ljust(24) + "réel".rjust(9) + "".join(f"{a:>7}h" for a in AGES))
     for T in ev["order"]:
@@ -707,9 +731,11 @@ def report():
 
 
 if __name__ == "__main__":
+    ACC = sys.argv[sys.argv.index("--compte") + 1] if "--compte" in sys.argv[:-1] else "fr"
     if "--json" in sys.argv:
         sys.stdout.reconfigure(encoding="utf-8")
         i = sys.argv.index("--json")
-        print(json.dumps(prediction(sys.argv[i + 1] if len(sys.argv) > i + 1 else None), ensure_ascii=False, indent=1, default=str)[:6000])
+        pid = sys.argv[i + 1] if len(sys.argv) > i + 1 and not sys.argv[i + 1].startswith("--") else None
+        print(json.dumps(prediction(pid, ACC), ensure_ascii=False, indent=1, default=str)[:6000])
     else:
-        report()
+        report(ACC)
