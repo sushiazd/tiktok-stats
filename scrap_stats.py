@@ -205,28 +205,16 @@ class Studio:
                 sys.exit("Le profil Chrome est déjà utilisé par un autre script (ou Chrome ouvert sur ce profil). "
                          "Attends qu'il finisse, ne le tue pas.")
             raise
-        # Chrome charge ses cookies depuis le disque un peu après le lancement : sans attente, un compte
-        # bien connecté passait parfois pour « pas connecté » (ES, 23 nov. 17h55, réussi 2 min plus tard).
-        connecte = lambda: any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com"))
+        # Chrome charge ses cookies un peu après le lancement : on laisse ~12 s avant de conclure.
+        # NB : lancé depuis l'app Claude, LOCALAPPDATA est redirigé vers Packages\Claude_*\LocalCache\Local :
+        # Claude voit d'autres profils que Stats TikTok.exe (ES « pas connecté » du 23/11 = vrai profil jamais connecté).
         for _ in range(8):
-            if connecte():
+            if any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com")):
                 break
             time.sleep(1.5)
         else:
-            # Encore rien (ES, 23 nov. 19h27, alors que le profil était bien connecté) : on ouvre Studio,
-            # ce qui force Chrome à charger le profil, puis on revérifie avant d'abandonner.
-            try:
-                pg = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
-                pg.goto(STUDIO, wait_until="domcontentloaded", timeout=60000)
-            except Exception:
-                pass
-            for _ in range(6):
-                if connecte():
-                    break
-                time.sleep(1.5)
-            else:
-                self.ctx.close()
-                sys.exit(f"Pas connecté à TikTok dans ce profil : {CONNEXION}.")
+            self.ctx.close()
+            sys.exit(f"Pas connecté à TikTok dans ce profil : {CONNEXION}.")
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
         self.captured: list[dict] = []
         self.insight_template: str | None = None

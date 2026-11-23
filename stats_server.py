@@ -83,8 +83,7 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
         py = Path(sys.executable)
         py = py.with_name("python.exe") if py.name.lower() == "pythonw.exe" and py.with_name("python.exe").exists() else py
         code = 0
-        def un(a: str) -> tuple[int, bool]:
-            deco = False
+        def un(a: str) -> int:
             cmd = [str(py), "-u", str(HERE / "scrap_stats.py"), "--account", a, *args]
             try:
                 p = subprocess.Popen(cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
@@ -92,7 +91,6 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
                                      env={**os.environ, "PYTHONIOENCODING": "utf-8"},  # sinon « connect� »
                                      creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 for line in p.stdout:
-                    deco = deco or "Pas connecté" in line
                     with lock:
                         job["lines"].append(line.rstrip())
                         job["lines"] = job["lines"][-200:]
@@ -101,18 +99,13 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
                 with lock:
                     job["lines"].append(f"Erreur : {e}")
                 c = -1
-            return c, deco
+            return c
 
         for a in accs:
             if len(accs) > 1:
                 with lock:
                     job["lines"].append(f"--- compte {a} ---")
-            c, deco = un(a)
-            if c != 0 and deco:  # parfois faux juste après le compte précédent : un 2e essai, 10 s plus tard
-                with lock:
-                    job["lines"].append("Nouvel essai dans 10 s…")
-                time.sleep(10)
-                c, _ = un(a)
+            c = un(a)
             code = code or c  # un compte qui échoue n'empêche pas les suivants
         with lock:
             job.update(running=False, code=code, ended=time.time())
