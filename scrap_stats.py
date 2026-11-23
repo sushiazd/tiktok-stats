@@ -205,7 +205,13 @@ class Studio:
                 sys.exit("Le profil Chrome est déjà utilisé par un autre script (ou Chrome ouvert sur ce profil). "
                          "Attends qu'il finisse, ne le tue pas.")
             raise
-        if not any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com")):
+        # Chrome charge ses cookies depuis le disque un peu après le lancement : sans attente, un compte
+        # bien connecté passait parfois pour « pas connecté » (ES, 23 nov. 17h55, réussi 2 min plus tard).
+        for _ in range(8):
+            if any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com")):
+                break
+            time.sleep(1.5)
+        else:
             self.ctx.close()
             sys.exit(f"Pas connecté à TikTok dans ce profil : {CONNEXION}.")
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
@@ -502,7 +508,10 @@ def main():
     ap.add_argument("--out", help="dossier de sortie (défaut stats-out/<date_heure>)")
     a = ap.parse_args()
 
-    global PROFILE
+    global PROFILE, CONNEXION
+    if "TIKTOK_STATS_CONNEXION" not in os.environ and a.account != "fr":  # chez le propriétaire : le .bat du compte
+        CONNEXION = (f"lance connecter-chrome-{a.account}.bat dans tiktok-auto, connecte-toi, puis ferme la fenêtre"
+                     if (HERE / f"connecter-chrome-{a.account}.bat").exists() else CONNEXION)
     if not comptes.existe(a.account):
         sys.exit(f"Compte inconnu : {a.account} (comptes : {', '.join(c['id'] for c in comptes.liste())})")
     PROFILE = comptes.profil(a.account)

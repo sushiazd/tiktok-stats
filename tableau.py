@@ -192,6 +192,18 @@ def planning_get() -> dict:
                 postes[n] = {**x, "nom": noms.get(x["id"])}
             posts.append({**x, "compte": c["id"], "nom": noms.get(x["id"])})
         cars += _carrousels(c["id"], postes)
+    # un prompt placé avant d'être fabriqué devient son carrousel dès qu'Antigravity a rendu le dossier
+    rendus = {c["cle"] for c in cars}
+    change = False
+    for x in p["plan"]:
+        m = re.fullmatch(r"(fr|en|es)/prompt-(\d+)", str(x.get("carrousel", "")))
+        if m:
+            cle = next((k for k in rendus if re.fullmatch(rf"{m.group(1)}/carrousel-0*{m.group(2)}", k)), None)
+            if cle:
+                x["carrousel"], change = cle, True
+    if change:
+        with _lock:
+            _ecrire(p)
     faits = {c["cle"] for c in cars if c["etat"] == "poste"}
     plan = [x for x in p["plan"] if x.get("carrousel") not in faits]  # un carrousel posté sort du planning
     posts = [x for x in posts if x.get("poste_le") and x["poste_le"] >= (dt.date.today() - dt.timedelta(days=7)).isoformat()]

@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import subprocess
 import sys
 import threading
@@ -89,6 +90,7 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
             try:
                 p = subprocess.Popen(cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      text=True, encoding="utf-8", errors="replace",
+                                     env={**os.environ, "PYTHONIOENCODING": "utf-8"},  # sinon « connect� »
                                      creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 for line in p.stdout:
                     with lock:
@@ -143,7 +145,13 @@ class Handler(BaseHTTPRequestHandler):
             f = tableau.couverture(params.get("c", ""))
             if not f:
                 return self.send(404, b"Introuvable", "text/plain; charset=utf-8")
-            return self.send(200, f.read_bytes(), "image/png")
+            body = f.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "image/png")
+            self.send_header("Cache-Control", "max-age=300")  # le planning se recharge toutes les 30 s
+            self.send_header("Content-Length", str(len(body)))
+            self.end_headers()
+            return self.wfile.write(body)
         if path == "/api/comptes":
             return self.json({"comptes": [{k: c.get(k) for k in ("id", "nom", "court")} for c in comptes.liste()],
                               "ajout": comptes.modifiable()})

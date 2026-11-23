@@ -422,9 +422,10 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
       <div class="dash-head">
         <div>
           <h2>Planning des posts</h2>
-          <p class="sub">Clique sur un créneau libre pour y placer un carrousel. Ce qui est déjà posté s'affiche tout seul après « Mettre à jour ».</p>
+          <p class="sub">Clique sur un créneau libre pour y placer un carrousel. Les nouveaux carrousels apparaissent tout seuls (ou avec « Actualiser ») ; les posts déjà sortis, après « Mettre à jour ».</p>
         </div>
         <div class="dash-ctl">
+          <button type="button" class="btn" id="planRefresh" title="Relit les dossiers de carrousels et le planning, sans relever TikTok">↻ Actualiser</button>
           <button type="button" class="btn" id="hoursBtn" aria-expanded="false">Horaires</button>
           <button type="button" class="btn btn-primary" id="fillBtn">Proposer un planning</button>
         </div>
@@ -942,8 +943,13 @@ async function loadGlobal() {
   try { const r = await fetch('/api/global'); G = r.ok ? await r.json() : null; } catch (e) { G = null; }
   renderGlobal();
 }
+let plText = null;
 async function loadPlanning() {
-  try { const r = await fetch('/api/planning'); PL = r.ok ? await r.json() : null; } catch (e) { PL = null; }
+  let txt = null;
+  try { const r = await fetch('/api/planning'); txt = r.ok ? await r.text() : null; } catch (e) {}
+  if (txt && txt === plText && PL) return;  // rien n'a changé : on ne redessine pas (ni les couvertures)
+  plText = txt;
+  try { PL = txt ? JSON.parse(txt) : null; } catch (e) { PL = null; }
   renderPlanning();
 }
 
@@ -1077,9 +1083,9 @@ $('gSpan').querySelectorAll('button').forEach(b => b.onclick = () => { gSpan = +
 
 // ------------------------------------------------------------ planning (emploi du temps des posts)
 const carOf = cle => (PL?.carrousels || []).find(c => c.cle === cle);
-const thumb = c => c && c.etat !== 'a_fabriquer' ? `/api/couverture?c=${encodeURIComponent(c.cle)}` : null;
+const thumb = c => c && c.etat !== 'a_fabriquer' ? `/api/couverture?c=${encodeURIComponent(c.cle)}&v=${encodeURIComponent(c.cree || '')}` : null;
 const toeicWarn = c => c && c.toeic && c.compte !== 'fr';
-const carLabel = c => c ? `${PREFIX[c.compte] || ''}${c.compte === 'fr' ? '' : ' '}${c.num}` : '?';
+const carLabel = c => c ? (c.compte === 'fr' ? `J${c.num}` : `${PREFIX[c.compte] || ''} ${c.compte === 'es' ? String(c.num).padStart(2, '0') : c.num}`) : '?';
 const PREFIX = { fr: 'J', en: 'EN', es: 'ES' };
 const slotTime = (d, h) => new Date(d + 'T' + h);
 function postsOf(acc, d) { return (PL?.posts || []).filter(p => p.compte === acc && (p.poste_le || '').slice(0, 10) === d).sort((a, b) => a.poste_le.localeCompare(b.poste_le)); }
@@ -1155,6 +1161,17 @@ async function planPost(body) {
   await loadPlanning();
   return true;
 }
+
+$('planRefresh').onclick = async () => {
+  const b = $('planRefresh'); b.disabled = true;
+  plText = null; await loadPlanning();
+  b.disabled = false; toast('Planning à jour ✓', 2000);
+};
+// le planning se recharge tout seul : carrousels fabriqués par Antigravity, planning changé ailleurs
+const planVisible = () => VIEW === 'tout' && !document.hidden && $('picker').hidden;
+setInterval(() => { if (planVisible()) loadPlanning(); }, 30 * 1000);
+addEventListener('focus', () => { if (planVisible()) loadPlanning(); });
+document.addEventListener('visibilitychange', () => { if (planVisible()) loadPlanning(); });
 
 // « Proposer un planning » : les carrousels prêts vont dans les prochains créneaux libres de leur compte
 $('fillBtn').onclick = async () => {
