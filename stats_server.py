@@ -17,11 +17,13 @@ import time
 import webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+from urllib.parse import unquote
 
 HERE = Path(__file__).resolve().parent
 PAGE = HERE / "stats-page"
 sys.path.insert(0, str(HERE))
 import comptes  # noqa: E402  (liste des comptes, profil et dossier de relevés de chacun)
+import tableau  # noqa: E402  (vue d'ensemble : vues des comptes, installs, planning)
 
 OUT = comptes.sortie("fr")  # compte par défaut
 
@@ -67,6 +69,8 @@ def complete_auto(d: dict, acc: str = "fr"):
 
 
 def start_refresh(args: list[str], acc: str = "fr") -> bool:
+    """acc = un compte, ou « tous » : les comptes l'un après l'autre (vue d'ensemble)."""
+    accs = [c["id"] for c in comptes.liste()] if acc == "tous" else [acc]
     with lock:
         if job["running"]:
             return False
@@ -76,20 +80,26 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
         # Dans la fenêtre (pythonw.exe), le relevé passe par python.exe pour que sa sortie soit lue.
         py = Path(sys.executable)
         py = py.with_name("python.exe") if py.name.lower() == "pythonw.exe" and py.with_name("python.exe").exists() else py
-        cmd = [str(py), "-u", str(HERE / "scrap_stats.py"), "--account", acc, *args]
-        try:
-            p = subprocess.Popen(cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                                 text=True, encoding="utf-8", errors="replace",
-                                 creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
-            for line in p.stdout:
+        code = 0
+        for a in accs:
+            cmd = [str(py), "-u", str(HERE / "scrap_stats.py"), "--account", a, *args]
+            if len(accs) > 1:
                 with lock:
-                    job["lines"].append(line.rstrip())
-                    job["lines"] = job["lines"][-200:]
-            code = p.wait()
-        except Exception as e:  # python introuvable, etc.
-            with lock:
-                job["lines"].append(f"Erreur : {e}")
-            code = -1
+                    job["lines"].append(f"--- compte {a} ---")
+            try:
+                p = subprocess.Popen(cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                     text=True, encoding="utf-8", errors="replace",
+                                     creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
+                for line in p.stdout:
+                    with lock:
+                        job["lines"].append(line.rstrip())
+                        job["lines"] = job["lines"][-200:]
+                c = p.wait()
+            except Exception as e:  # python introuvable, etc.
+                with lock:
+                    job["lines"].append(f"Erreur : {e}")
+                c = -1
+            code = code or c  # un compte qui échoue n'empêche pas les suivants
         with lock:
             job.update(running=False, code=code, ended=time.time())
 
@@ -122,9 +132,18 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_GET(self):
         path, _, query = self.path.partition("?")
-        params = dict(p.split("=", 1) for p in query.split("&") if "=" in p)
+        params = {k: unquote(v) for k, v in (p.split("=", 1) for p in query.split("&") if "=" in p)}
         acc = params.get("account", "fr")
         acc = acc if comptes.existe(acc) else "fr"
+        if path == "/api/global":  # vue d'ensemble : vues par jour des comptes + installs PostHog
+            return self.json(tableau.global_data())
+        if path == "/api/planning":
+            return self.json(tableau.planning_get())
+        if path == "/api/couverture":
+            f = tableau.couverture(params.get("c", ""))
+            if not f:
+                return self.send(404, b"Introuvable", "text/plain; charset=utf-8")
+            return self.send(200, f.read_bytes(), "image/png")
         if path == "/api/comptes":
             return self.json({"comptes": [{k: c.get(k) for k in ("id", "nom", "court")} for c in comptes.liste()],
                               "ajout": comptes.modifiable()})
@@ -158,6 +177,15 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json(predict.prediction(params.get("id"), acc))
             except Exception as e:
                 return self.json({"error": f"Prédiction indisponible : {e}"}, 500)
+        if path == "/api/chaleur":  # chaque compte est-il calme (on peut poster) ou chaud (un post y est en vague) ?
+            import predict
+            out = []
+            for c in comptes.liste():
+                try:
+                    out.append({**predict.chaleur(c["id"]), "nom": c.get("nom"), "court": c.get("court")})
+                except Exception as e:
+                    out.append({"compte": c["id"], "nom": c.get("nom"), "court": c.get("court"), "etat": "inconnu", "erreur": str(e)[:200]})
+            return self.json({"comptes": out})
         if path == "/api/refresh":
             with lock:
                 return self.json({k: job.get(k) for k in ("running", "lines", "code", "started", "ended", "account")})
@@ -170,7 +198,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, f.read_bytes(), ctype + "; charset=utf-8")
 
     def do_POST(self):
-        if self.path not in ("/api/refresh", "/api/comptes") or not self.same_origin():
+        if self.path not in ("/api/refresh", "/api/comptes", "/api/planning") or not self.same_origin():
             return self.json({"error": "refusé"}, 403)
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
@@ -178,12 +206,15 @@ class Handler(BaseHTTPRequestHandler):
             body = {}
         if self.path == "/api/comptes":
             return self.comptes_post(body)
+        if self.path == "/api/planning":
+            r = tableau.planning_post(body if isinstance(body, dict) else {})
+            return self.json(r, 400 if r.get("error") else 200)
         n = body.get("n", 6)
         args = ["--all"] if n == "all" else ["--last", str(max(1, min(int(n), 200)))]
         if body.get("compte") is False:
             args.append("--no-compte")
         acc = body.get("account", "fr")
-        if not start_refresh(args, acc if comptes.existe(acc) else "fr"):
+        if not start_refresh(args, acc if acc == "tous" or comptes.existe(acc) else "fr"):
             return self.json({"error": "Un relevé est déjà en cours."}, 409)
         self.json({"ok": True})
 

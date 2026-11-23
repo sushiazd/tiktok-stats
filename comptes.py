@@ -1,6 +1,6 @@
 """Les comptes TikTok suivis par Stats TikTok : profil Chrome et dossier de relevés de chacun.
 
-Chez le propriétaire (rien de réglé) : les deux comptes fixes, fr = @vocly.app et en = @vocly.en.
+Chez le propriétaire (rien de réglé) : les comptes fixes, fr = @vocly.app, en = @vocly.en, es = compte espagnol (téléphone du pote).
 Version partagée (lanceur.py règle TIKTOK_STATS_COMPTES) : une liste modifiable dans comptes.json,
 le premier compte a l'identifiant « fr », les suivants c2, c3... (prévision des vues pour chacun)
 """
@@ -20,6 +20,7 @@ _PROFIL = os.environ.get("TIKTOK_STATS_PROFIL")    # profil Chrome du 1er compte
 DEFAUT = [
     {"id": "fr", "nom": "@vocly.app", "court": "FR", "profil": "vocly-tiktok-chrome", "sortie": "stats-out"},
     {"id": "en", "nom": "@vocly.en", "court": "EN", "profil": "vocly-tiktok-chrome-en", "sortie": "stats-out-en"},
+    {"id": "es", "nom": "@vocly.es3", "court": "ES", "profil": "vocly-tiktok-chrome-es", "sortie": "stats-out-es"},
 ]
 
 

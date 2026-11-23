@@ -709,6 +709,52 @@ def prediction(pid: str | None, acc: str = "fr"):
     return out
 
 
+# ---------------------------------------------------------------- compte calme ou chaud (rapport A11, 17 nov 2026)
+# Sur 28 escaliers FR + EN : quand les AUTRES posts du compte avaient fait >= 30 000 vues dans les 24 h avant la
+# publication, 0 post sur 12 a percé (>= 25 K à 48 h) ; compte calme, 7 sur 16. La vague d'un compte ne gêne pas
+# les autres comptes. Seuil mesuré sur nos comptes (plancher ~10 K par post) : à revoir pour un compte d'une autre taille.
+
+SEUIL_CHAUD = 30000
+_HEAT: dict = {}  # compte -> (date des données, posts)
+
+
+def chaleur(acc: str = "fr") -> dict:
+    """Vues faites par tous les posts du compte sur les 24 dernières heures connues, et quand il redeviendrait calme."""
+    acc = acc if comptes.existe(acc) else "fr"
+    with _LOCK:
+        sync_cloud(acc=acc)
+        stamp = data_stamp(acc)
+        c = _HEAT.get(acc)
+        if not c or c[0] != stamp:
+            c = _HEAT[acc] = (stamp, load_posts(items=scan(acc)))
+        posts = c[1]
+    out = {"compte": acc, "seuil": SEUIL_CHAUD}
+    if not posts:
+        return {**out, "etat": "inconnu"}
+    ref = max(P["last_at"] for P in posts.values())  # heure des données les plus récentes
+
+    def gained(P, t1, t2):  # vues gagnées entre deux heures (avant le post : 0 ; après ses données : plus rien)
+        v = lambda t: 0.0 if t <= P["t0"] else views_at(P, min((t - P["t0"]) / 3600, age_now(P))) or 0.0
+        return max(0.0, v(t2) - v(t1))
+
+    N = names()
+    per = sorted(((gained(P, ref - 86400, ref), P) for P in posts.values()), key=lambda x: -x[0])
+    total = sum(g for g, _ in per)
+    rythme = sum(gained(P, ref - 7200, ref) for P in posts.values()) / 2  # vues par heure, sur les 2 dernières heures
+    au_plus_tot = None
+    if total >= SEUIL_CHAUD:  # même si plus aucune vue n'arrivait, les 24 h glissantes ne passent sous le seuil qu'à cette heure
+        for k in range(1, 25):
+            if sum(gained(P, ref + 3600 * k - 86400, ref) for P in posts.values()) < SEUIL_CHAUD:
+                au_plus_tot = ref + 3600 * k
+                break
+    age = (time.time() - ref) / 3600
+    etat = "inconnu" if age > 24 else "chaud" if total >= SEUIL_CHAUD else "calme"
+    return {**out, "etat": etat, "vues24": round(total), "rythme_h": round(rythme), "rythme_max": round(SEUIL_CHAUD / 24),
+            "ref": ref, "age_donnees_h": round(age, 1), "au_plus_tot": au_plus_tot,
+            "top": [{"id": P["id"], "nom": N.get(P["id"], "") or datetime.fromtimestamp(P["t0"]).strftime("%d/%m %Hh%M"),
+                     "vues24": round(g)} for g, P in per[:2] if g >= 1000]}
+
+
 # ---------------------------------------------------------------- rapport console
 
 def report(acc: str = "fr"):

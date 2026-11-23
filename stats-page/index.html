@@ -65,6 +65,10 @@ button,select,input{font:inherit;color:inherit}
 .seg{display:inline-flex;border:1px solid var(--rule-strong);border-radius:10px;overflow:hidden}
 .seg button{height:34px;padding:0 13px;border:0;background:var(--sheet);font-size:14px;font-weight:600;color:var(--ink-2);cursor:pointer}
 .seg button[aria-pressed="true"]{background:var(--pen-soft);color:var(--pen)}
+.seg .hd{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:1px;background:var(--ghost)}
+.seg .hd.calme{background:var(--ok)}.seg .hd.chaud{background:var(--warn)}
+#chaleur{margin:0 0 14px}
+#chaleur .muted{color:inherit;opacity:.75}
 .btn{display:inline-flex;align-items:center;gap:7px;height:36px;padding:0 15px;border-radius:10px;border:1px solid var(--rule-strong);background:var(--sheet);font-weight:600;font-size:14px;cursor:pointer;white-space:nowrap}
 .btn:hover{border-color:var(--ink-2)}
 .btn-primary{background:var(--pen);border-color:var(--pen);color:var(--pen-ink)}
@@ -206,6 +210,59 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
 .heat .lab{color:var(--muted);font-weight:600}
 .heat .hh{color:var(--muted);text-align:center}
 
+/* vue d'ensemble */
+.dash{display:grid;grid-template-columns:minmax(0,1fr);gap:22px}
+.dash>section{margin-top:0;min-width:0}
+.dash-head{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.dash-head .sub{margin:2px 0 0}
+.dash-ctl{display:flex;gap:8px;flex-wrap:wrap}
+.dash-ctl .seg button{height:32px;font-size:13px}
+.foot{margin:10px 0 0;font-size:12px;color:var(--muted)}
+.legend i.sq{width:11px;height:11px;border:0;border-radius:3px;vertical-align:-1px}
+.legend i.ln{width:16px;border-top:2.5px solid var(--ink)}
+.num .v small{font:500 14px var(--sans);color:var(--muted);margin-left:4px}
+.up-t{color:var(--ok)}.down-t{color:var(--bad)}
+.edt-wrap{overflow-x:auto;margin:18px -26px 0;padding:0 26px}
+.edt{display:grid;grid-template-columns:76px repeat(7,minmax(118px,1fr));gap:6px;min-width:930px}
+.edt .dh{font-size:12px;font-weight:700;color:var(--muted);padding:4px 6px}
+.edt .dh.today{color:var(--pen)}
+.edt .rh{display:flex;align-items:center;gap:7px;font-weight:700;font-size:14px}
+.edt .rh i{width:10px;height:10px;border-radius:3px;flex:none}
+.edt .cell{background:var(--sheet-2);border-radius:12px;padding:6px;display:grid;gap:5px;align-content:start;min-height:70px}
+.edt .cell.today{background:var(--pen-soft)}
+.edt .cell.past{opacity:.85}
+.chip{display:flex;align-items:center;gap:6px;border-radius:9px;padding:5px 7px;font-size:12px;line-height:1.25;background:var(--sheet);border:1px solid var(--rule);min-width:0}
+.chip b{font-variant-numeric:tabular-nums;flex:none}
+.chip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.chip.done{border-color:transparent;background:var(--ok-soft);color:var(--ok)}
+.chip.done span{color:var(--ink-2)}
+.chip.plan{border-color:var(--pen)}
+.chip.plan.warn{border-color:var(--warn)}
+.chip img{width:22px;height:30px;object-fit:cover;border-radius:4px;flex:none}
+.chip .x{margin-left:auto;border:0;background:none;color:var(--muted);cursor:pointer;padding:0 2px;font-size:14px;flex:none}
+.chip .x:hover{color:var(--bad)}
+.slot{border:1px dashed var(--rule-strong);background:none;border-radius:9px;padding:6px 7px;font-size:12px;color:var(--muted);text-align:left;cursor:pointer;font-variant-numeric:tabular-nums}
+.slot:hover{border-color:var(--pen);color:var(--pen)}
+.stock{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px}
+.scard{display:flex;gap:10px;border:1px solid var(--rule);border-radius:14px;padding:10px;background:var(--sheet);min-width:0}
+.scard img,.scard .ph{width:54px;height:72px;object-fit:cover;border-radius:7px;flex:none;background:var(--sheet-2)}
+.scard .ph{display:grid;place-items:center;font-size:11px;color:var(--muted);text-align:center;padding:4px}
+.scard b{display:block;font-size:13px;line-height:1.3}
+.scard p{margin:3px 0 0;font-size:12px;color:var(--muted);line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.tag{display:inline-block;padding:1px 7px;border-radius:6px;font-size:11px;font-weight:700;margin-top:5px;margin-right:4px}
+.tag.ok{background:var(--ok-soft);color:var(--ok)}.tag.todo{background:var(--sheet-2);color:var(--ink-2)}
+.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.pen{background:var(--pen-soft);color:var(--pen)}
+.picker{position:fixed;z-index:55;width:290px;max-height:360px;overflow-y:auto;background:var(--sheet);border:1px solid var(--rule-strong);border-radius:14px;box-shadow:var(--shadow);padding:8px}
+.picker .ph-t{font-size:12px;font-weight:700;color:var(--muted);padding:4px 6px 8px}
+.picker button.it{display:flex;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:none;border-radius:10px;padding:6px;cursor:pointer;font-size:13px}
+.picker button.it:hover{background:var(--sheet-2)}
+.picker button.it img,.picker .noimg{width:26px;height:36px;object-fit:cover;border-radius:5px;flex:none;background:var(--sheet-2)}
+.picker small{display:block;color:var(--muted);font-size:11px}
+.hours-ed{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-top:16px;padding:14px;border-radius:12px;background:var(--sheet-2)}
+.hours-ed label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
+.hours-ed input{height:34px;width:170px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--sheet);padding:0 9px;font-size:14px}
+@media (max-width:720px){.edt-wrap{margin:18px -18px 0;padding:0 18px}}
+
 .spin{display:inline-block;width:14px;height:14px;border:2px solid currentColor;border-right-color:transparent;border-radius:50%;animation:sp .8s linear infinite}
 @keyframes sp{to{transform:rotate(360deg)}}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--paper);padding:10px 16px;border-radius:12px;font-weight:600;font-size:14px;box-shadow:var(--shadow);display:none}
@@ -255,6 +312,7 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
 
 <main>
   <p class="status" id="status">Chargement…</p>
+  <p class="note" id="chaleur" hidden></p>
   <div id="job" hidden></div>
 
   <!-- 1. le post choisi (par défaut le dernier) -->
@@ -340,7 +398,45 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
     </details>
   </section>
   </div>
+
+  <!-- vue d'ensemble : les comptes ensemble, les installs, le planning -->
+  <div class="dash" id="dash" hidden>
+    <section class="card">
+      <div class="dash-head">
+        <div>
+          <h2>Vues des comptes et installs de l'app</h2>
+          <p class="sub" id="gSub">Vues par jour sur TikTok (barres) et installs Vocly dans PostHog (ligne).</p>
+        </div>
+        <div class="dash-ctl">
+          <div class="seg" id="gMode" role="group" aria-label="Affichage"><button type="button" data-m="jour" aria-pressed="true">Par jour</button><button type="button" data-m="cumul" aria-pressed="false">Cumulé</button></div>
+          <div class="seg" id="gSpan" role="group" aria-label="Période"><button type="button" data-s="14" aria-pressed="false">14 j</button><button type="button" data-s="30" aria-pressed="true">30 j</button><button type="button" data-s="0" aria-pressed="false">Tout</button></div>
+        </div>
+      </div>
+      <div class="nums" id="gNums"></div>
+      <div class="chart" id="gChart"></div>
+      <div class="legend" id="gLegend"></div>
+      <p class="foot" id="gFoot"></p>
+    </section>
+
+    <section class="card" id="planCard">
+      <div class="dash-head">
+        <div>
+          <h2>Planning des posts</h2>
+          <p class="sub">Clique sur un créneau libre pour y placer un carrousel. Ce qui est déjà posté s'affiche tout seul après « Mettre à jour ».</p>
+        </div>
+        <div class="dash-ctl">
+          <button type="button" class="btn" id="hoursBtn" aria-expanded="false">Horaires</button>
+          <button type="button" class="btn btn-primary" id="fillBtn">Proposer un planning</button>
+        </div>
+      </div>
+      <div class="hours-ed" id="hoursEd" hidden></div>
+      <div class="edt-wrap"><div class="edt" id="edt"></div></div>
+      <h3 style="margin-top:26px">Carrousels à poster</h3>
+      <div class="stock" id="stock"></div>
+    </section>
+  </div>
 </main>
+<div class="picker" id="picker" hidden role="dialog" aria-label="Choisir un carrousel"></div>
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast"></div>
 
@@ -675,6 +771,7 @@ async function loadPrediction() {
 }
 
 window.redraw = function () {
+  if (VIEW === 'tout') { renderGlobal(); renderPlanning(); return; }
   if (!D || !D.summary.length) return;
   renderHero(); renderList(); renderAccount(); renderMore();
   const p = focusPost();
@@ -684,22 +781,75 @@ addEventListener('resize', () => { clearTimeout(window._rz); window._rz = setTim
 
 // ------------------------------------------------------------ comptes (FR / EN, ou liste modifiable dans la version partagée)
 function markAcc() {
-  $('accSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.a === ACC));
+  const on = typeof VIEW !== 'undefined' && VIEW === 'tout' ? '__tout' : ACC;
+  $('accSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.a === on));
   $('removeBtn').hidden = ACC === 'fr';
 }
 async function switchAcc(id) {
+  const back = VIEW === 'tout';
+  VIEW = 'compte'; savePref('stats-view', 'compte');
   ACC = id;
   try { localStorage.setItem('stats-account', ACC); } catch (e) {}
-  markAcc(); focusId = null; PRED = null;
+  focusId = null; PRED = null; showView();
   await loadRuns(); await loadData($('runSel').value);
+  if (back) redraw();  // les graphiques ont besoin de la largeur réelle, une fois la page du compte visible
 }
 function renderAccs() {
-  $('accSeg').innerHTML = COMPTES.map(c => `<button type="button" data-a="${esc(c.id)}" title="${esc(c.nom)}">${esc(c.court || cut(c.nom, 16))}</button>`).join('');
-  $('accSeg').hidden = COMPTES.length < 2;
-  $('accSeg').querySelectorAll('button').forEach(b => b.onclick = () => { if (b.dataset.a !== ACC) switchAcc(b.dataset.a); });
+  $('accSeg').innerHTML = `<button type="button" data-a="__tout" title="Les comptes ensemble, les installs et le planning">Ensemble</button>` +
+    COMPTES.map(c => `<button type="button" data-a="${esc(c.id)}" title="${esc(c.nom)}">${esc(c.court || cut(c.nom, 16))}</button>`).join('');
+  $('accSeg').hidden = false;
+  $('accSeg').querySelectorAll('button').forEach(b => b.onclick = () => {
+    if (b.dataset.a === '__tout') { if (VIEW !== 'tout') openDash(); }
+    else if (VIEW === 'tout' || b.dataset.a !== ACC) switchAcc(b.dataset.a);
+  });
   $('addAccBtn').hidden = $('accTools').hidden = !AJOUT;
   markAcc();
+  renderChaleur();
 }
+
+// ------------------------------------------------------------ compte calme ou chaud (rapport A11)
+// Chaud = les posts du compte ont fait >= 30 k vues sur les 24 dernières heures : un nouveau post n'y perce
+// presque jamais (0 sur 12 dans nos stats, contre 7 sur 16 compte calme). La vague d'un compte ne gêne pas les autres.
+let HEAT = null;
+async function loadChaleur() {
+  try { const r = await fetch('/api/chaleur'); if (r.ok) HEAT = (await r.json()).comptes || null; } catch (e) {}
+  renderChaleur();
+}
+const heure = t => {
+  const d = new Date(t * 1000), now = new Date(), tom = new Date(now); tom.setDate(now.getDate() + 1);
+  const day = d.toDateString() === now.toDateString() ? '' : d.toDateString() === tom.toDateString() ? 'demain ' : d.toLocaleDateString('fr-FR', { weekday: 'long' }) + ' ';
+  return day + d.getHours() + 'h';
+};
+function renderChaleur() {
+  $('accSeg').querySelectorAll('button').forEach(b => {
+    if (b.dataset.a === '__tout') return;
+    const h = HEAT?.find(x => x.compte === b.dataset.a);
+    let dot = b.querySelector('.hd');
+    if (!dot) { dot = document.createElement('i'); dot.className = 'hd'; b.prepend(dot); }
+    dot.className = 'hd ' + (h?.etat || '');
+    b.title = accName(b.dataset.a) + (h?.etat === 'chaud' ? ' · compte chaud : attends avant d’y poster' : h?.etat === 'calme' ? ' · compte calme : tu peux y poster' : '');
+  });
+  const el = $('chaleur'), h = HEAT?.find(x => x.compte === ACC);
+  if (!h || h.vues24 == null || VIEW === 'tout') { el.hidden = true; return; }
+  el.hidden = false;
+  const old = h.age_donnees_h >= 3 && h.etat !== 'inconnu' ? ` <span class="muted">(chiffres d'il y a ${fmt(h.age_donnees_h)} h, clique « Mettre à jour »)</span>` : '';
+  if (h.etat === 'inconnu') {
+    el.className = 'note';
+    el.innerHTML = `On ne sait pas si le compte est calme : pas de relevé depuis plus de 24 h. Clique « Mettre à jour ».`;
+  } else if (h.etat === 'calme') {
+    el.className = 'note ok';
+    el.innerHTML = `<b>Compte calme</b> : ${short(h.vues24)} vues sur les dernières 24 h (chaud à partir de ${short(h.seuil)}). Bon moment pour poster un carrousel ici.${old}`;
+  } else {
+    const top = (h.top || []).map(t => `${esc(t.nom.split(' · ')[0])} (${short(t.vues24)})`).join(' et ');
+    const calmes = (HEAT || []).filter(x => x.compte !== ACC && x.etat === 'calme').map(x => esc(x.court || x.nom));
+    let quand = h.au_plus_tot ? `Pas calme avant ${heure(h.au_plus_tot)}` : 'Pas calme avant demain';
+    quand += h.rythme_h > h.rythme_max ? `, et seulement une fois retombé sous ~${fmt(h.rythme_max)} vues/heure (en ce moment ${fmt(h.rythme_h)}).` : '.';
+    el.className = 'note';
+    el.innerHTML = `<b>Compte chaud</b> : ${short(h.vues24)} vues sur les dernières 24 h${top ? `, surtout ${top}` : ''}. Un carrousel posté ici maintenant n'a presque aucune chance de percer. ${quand}` +
+      (calmes.length ? ` <b>${calmes.join(', ')} ${calmes.length > 1 ? 'sont calmes' : 'est calme'}</b> : poste plutôt là.` : '') + old;
+  }
+}
+setInterval(loadChaleur, 10 * 60 * 1000);
 async function loadAccs() {
   try { const r = await (await fetch('/api/comptes')).json(); if (r.comptes?.length) { COMPTES = r.comptes; AJOUT = !!r.ajout; } } catch (e) {}
   if (!COMPTES.some(c => c.id === ACC)) ACC = COMPTES[0].id;
@@ -753,6 +903,297 @@ $('removeBtn').onclick = async () => {
   if (await accPost({ action: 'retirer', id: ACC })) { await loadAccs(); await switchAcc(COMPTES[0].id); toast('Compte retiré (ses relevés restent sur l’ordinateur)'); }
 };
 
+// ------------------------------------------------------------ vue d'ensemble : comptes ensemble, installs, planning
+const TOUT = '__tout';
+let VIEW = 'compte', G = null, PL = null, gMode = 'jour', gSpan = 30;
+try {
+  if (localStorage.getItem('stats-view') === 'tout') VIEW = 'tout';
+  gMode = localStorage.getItem('stats-gmode') === 'cumul' ? 'cumul' : 'jour';
+  const s = localStorage.getItem('stats-gspan'); if (s != null && !Number.isNaN(+s)) gSpan = +s;
+} catch (e) {}
+const COLS = ['--s1', '--s2', '--s3', '--s5'];
+const accCol = id => `var(${COLS[Math.max(0, COMPTES.findIndex(c => c.id === id)) % COLS.length]})`;
+const accShort = id => (COMPTES.find(c => c.id === id) || {}).court || id;
+const isoD = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+const addD = (iso, n) => { const d = new Date(iso + 'T12:00'); d.setDate(d.getDate() + n); return isoD(d); };
+const todayIso = () => isoD(new Date());
+const dLab = iso => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+const dLong = iso => new Date(iso + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+const dShort = iso => new Date(iso + 'T12:00').toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+const cap = s => s.charAt(0).toUpperCase() + s.slice(1);
+const pName = p => p.nom ? p.nom.split(' · ')[0] : cut((p.description || '').replace(/\s+/g, ' '), 22) || 'post';
+const savePref = (k, v) => { try { localStorage.setItem(k, v); } catch (e) {} };
+
+function showView() {
+  const tout = VIEW === 'tout';
+  $('dash').hidden = !tout;
+  if (tout) { $('layout').hidden = true; $('chaleur').hidden = true; }
+  else { $('layout').hidden = !D; renderChaleur(); }
+  markAcc();
+}
+async function openDash() {
+  VIEW = 'tout'; savePref('stats-view', 'tout'); showView();
+  $('status').innerHTML = `Vue d'ensemble · ${COMPTES.length} comptes`;
+  if (!G) empty($('gChart'), 'Chargement…');
+  if (!PL) $('edt').innerHTML = '<p class="empty">Chargement…</p>';
+  await Promise.all([loadGlobal(), loadPlanning()]);
+}
+async function loadGlobal() {
+  try { const r = await fetch('/api/global'); G = r.ok ? await r.json() : null; } catch (e) { G = null; }
+  renderGlobal();
+}
+async function loadPlanning() {
+  try { const r = await fetch('/api/planning'); PL = r.ok ? await r.json() : null; } catch (e) { PL = null; }
+  renderPlanning();
+}
+
+// les jours affichés, avec vues par compte, installs et posts du jour
+function gRows() {
+  const ids = COMPTES.map(c => c.id), V = {}, I = {};
+  (G.jours || []).forEach(j => { V[j.jour] = j; });
+  const inst = G.installs?.jours || [];
+  inst.forEach(j => { I[j.jour] = j; });
+  const instEnd = G.installs?.maj ? G.installs.maj.slice(0, 10) : (inst.length ? inst[inst.length - 1].jour : null);
+  const firstViews = (G.jours || []).find(j => ids.some(id => j.vues?.[id] > 0))?.jour;
+  const end = todayIso();
+  let start = firstViews || addD(end, -29);
+  if (gSpan && addD(end, -gSpan + 1) > start) start = addD(end, -gSpan + 1);
+  const P = {};
+  (G.posts || []).forEach(p => { const d = (p.poste_le || '').slice(0, 10); (P[d] = P[d] || []).push(p); });
+  const rows = [];
+  for (let d = start; d <= end; d = addD(d, 1)) {
+    const j = V[d] || { vues: {}, estime: {} }, i = I[d];
+    const has = instEnd && d <= instEnd;
+    rows.push({
+      jour: d, vues: Object.fromEntries(ids.map(id => [id, j.vues?.[id] ?? null])), estime: j.estime || {},
+      inst: has ? { fr: i?.fr || 0, es: i?.es || 0, it: i?.it || 0, autres: i?.autres || 0, total: i ? (i.fr || 0) + (i.es || 0) + (i.it || 0) + (i.autres || 0) : 0 } : null,
+      posts: (P[d] || []).sort((a, b) => a.poste_le.localeCompare(b.poste_le)),
+    });
+  }
+  return rows;
+}
+
+function renderGlobal() {
+  if (VIEW !== 'tout') return;
+  $('gMode').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', b.dataset.m === gMode));
+  $('gSpan').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', +b.dataset.s === gSpan));
+  if (!G) { empty($('gChart'), 'Pas de donnée : clique « Mettre à jour ».'); $('gNums').innerHTML = ''; return; }
+  const ids = COMPTES.map(c => c.id), rows = gRows();
+  // chiffres des 7 derniers jours (aujourd'hui compris) contre les 7 d'avant
+  const all = (() => { const keep = gSpan; gSpan = 0; const r = gRows(); gSpan = keep; return r; })();
+  const win = (a, b) => all.slice(Math.max(0, all.length - a), all.length - b);
+  const sumV = (rs, id) => rs.reduce((s, r) => s + (id ? r.vues[id] || 0 : ids.reduce((t, k) => t + (r.vues[k] || 0), 0)), 0);
+  const sumI = rs => rs.reduce((s, r) => s + (r.inst?.total || 0), 0);
+  const w1 = win(7, 0), w0 = win(14, 7);
+  const v1 = sumV(w1), v0 = sumV(w0), i1 = sumI(w1), i0 = sumI(w0);
+  const fr1 = w1.reduce((s, r) => s + (r.inst?.fr || 0), 0);
+  const evo = (a, b) => b > 0 ? (() => { const x = (a / b - 1) * 100; return ` <span class="${x >= 0 ? 'up-t' : 'down-t'}">${x >= 0 ? '+' : '−'}${fmt(Math.abs(x))} %</span>`; })() : '';
+  const rate = (i, v) => v > 0 ? i / v * 1000 : null;
+  const r1 = rate(i1, v1), r0 = rate(i0, v0);
+  $('gNums').innerHTML =
+    `<div class="num"><div class="k">Vues sur 7 jours</div><div class="v">${short(v1)}</div><div class="d">${evo(v1, v0)} vs les 7 jours d'avant · ${ids.map(id => `${esc(accShort(id))} ${short(sumV(w1, id))}`).join(' · ')}</div></div>` +
+    `<div class="num"><div class="k">Installs sur 7 jours</div><div class="v">${G.installs ? fmt(i1) : '–'}</div><div class="d">${G.installs ? `${evo(i1, i0)} vs les 7 jours d'avant · dont ${fmt(fr1)} en français` : 'pas de fichier installs-posthog.json'}</div></div>` +
+    `<div class="num"><div class="k">Installs pour 1 000 vues</div><div class="v">${r1 == null ? '–' : fmt(r1, 1)}</div><div class="d">${r0 == null ? '' : `${fmt(r0, 1)} les 7 jours d'avant`}</div></div>`;
+  comboChart($('gChart'), rows, ids);
+  $('gSub').textContent = G.installs ? "Vues par jour sur TikTok (barres) et installs de l'app dans PostHog (ligne)." : 'Vues par jour de tes comptes TikTok.';
+  $('gLegend').innerHTML = ids.map(id => `<span><i class="sq" style="background:${accCol(id)}"></i>${esc(accName(id))}</span>`).join('') +
+    (G.installs ? `<span><i class="ln"></i>Installs (PostHog)</span>` : '') + (gMode === 'cumul' ? '<span>Cumul depuis le début de la période (axe des installs à droite)</span>' : `<span>Barre pâle = chiffre estimé (TikTok ne l'a pas encore donné)</span>`);
+  const m = G.installs?.maj?.match(/(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/);
+  $('gFoot').textContent = G.installs ? `Installs : PostHog, chiffres du ${m ? `${m[3]}/${m[2]} à ${m[4]}h${m[5]}` : '?'}. Pour les rafraîchir, demande à Claude de remettre à jour installs-posthog.json.` : '';
+  $('gNums').querySelectorAll('.num').forEach((n, i) => { n.hidden = !G.installs && i > 0; });
+}
+
+function comboChart(el, rows, ids) {
+  const W = Math.max(el.clientWidth, 320), H = 316, m = { l: 50, r: 44, t: 28, b: 30 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, n = Math.max(rows.length, 1), bw = iw / n;
+  const cum = gMode === 'cumul';
+  // valeurs empilées (par jour, ou cumulées depuis le début de la période)
+  const acc = Object.fromEntries(ids.map(id => [id, 0]));
+  let ci = 0;
+  const pts = rows.map(r => {
+    const stack = {}; let base = 0;
+    ids.forEach(id => { const v = r.vues[id] || 0; acc[id] += v; const val = cum ? acc[id] : v; stack[id] = [base, base + val]; base += val; });
+    if (r.inst) ci += r.inst.total;
+    return { r, stack, total: base, inst: r.inst ? (cum ? ci : r.inst.total) : null };
+  });
+  const yMax = niceMax(Math.max(1, ...pts.map(p => p.total))), iMax = niceMax(Math.max(1, ...pts.map(p => p.inst || 0)));
+  const Y = v => m.t + ih - v / yMax * ih, YI = v => m.t + ih - v / iMax * ih, XC = i => m.l + (i + 0.5) * bw;
+  let g = '';
+  for (let k = 0; k <= 4; k++) {
+    const y = Y(yMax * k / 4);
+    g += `<line x1="${m.l}" x2="${m.l + iw}" y1="${y}" y2="${y}" stroke="var(${k ? '--grid' : '--axis'})"/>`;
+    g += `<text x="${m.l - 8}" y="${y + 4}" text-anchor="end">${short(yMax * k / 4)}</text>`;
+    g += `<text x="${m.l + iw + 8}" y="${y + 4}" text-anchor="start">${fmt(iMax * k / 4)}</text>`;
+  }
+  g += `<text x="${m.l - 8}" y="${m.t - 16}" text-anchor="end" class="lbl" style="font-size:11px">vues</text><text x="${m.l + iw + 8}" y="${m.t - 16}" class="lbl" style="font-size:11px">installs</text>`;
+  if (cum) {  // aires empilées
+    ids.forEach(id => {
+      const top = pts.map((p, i) => `${i ? 'L' : 'M'}${XC(i).toFixed(1)},${Y(p.stack[id][1]).toFixed(1)}`).join('');
+      const bot = pts.map((p, i) => `L${XC(i).toFixed(1)},${Y(p.stack[id][0]).toFixed(1)}`).reverse().join('');
+      g += `<path d="${top}${bot}Z" fill="${accCol(id)}" opacity=".85"/>`;
+    });
+  } else {
+    pts.forEach((p, i) => {
+      const x = m.l + i * bw + Math.min(2, bw * .12), w = Math.max(1, bw - 2 * Math.min(2, bw * .12));
+      ids.forEach(id => {
+        const [a, b] = p.stack[id]; if (b <= a) return;
+        g += `<rect x="${x.toFixed(1)}" y="${Y(b).toFixed(1)}" width="${w.toFixed(1)}" height="${(Y(a) - Y(b)).toFixed(1)}" fill="${accCol(id)}"${p.r.estime[id] ? ' opacity=".42"' : ''}/>`;
+      });
+    });
+  }
+  const ip = pts.map((p, i) => p.inst == null ? null : [XC(i), YI(p.inst)]).filter(Boolean);
+  if (ip.length) {
+    g += `<path d="${ip.map((q, i) => `${i ? 'L' : 'M'}${q[0].toFixed(1)},${q[1].toFixed(1)}`).join('')}" fill="none" stroke="var(--ink)" stroke-width="2.2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    if (!cum && n <= 45) ip.forEach(q => { g += `<circle cx="${q[0].toFixed(1)}" cy="${q[1].toFixed(1)}" r="2.6" fill="var(--ink)" stroke="var(--sheet)" stroke-width="1.5"/>`; });
+  }
+  const every = Math.ceil(n / Math.max(4, Math.floor(iw / 64)));
+  rows.forEach((r, i) => { if ((n - 1 - i) % every === 0) g += `<text x="${XC(i)}" y="${m.t + ih + 19}" text-anchor="middle">${dLab(r.jour)}</text>`; });
+  g += `<line class="xh" x1="0" x2="0" y1="${m.t}" y2="${m.t + ih}" stroke="var(--rule-strong)" visibility="hidden"/>`;
+  rows.forEach((r, i) => { g += `<rect x="${m.l + i * bw}" y="${m.t}" width="${bw}" height="${ih}" fill="transparent" data-i="${i}"/>`; });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Vues par jour des comptes et installs">${g}</svg>`;
+  const xh = el.querySelector('.xh');
+  el.querySelectorAll('rect[data-i]').forEach(rc => {
+    rc.addEventListener('mousemove', ev => {
+      const i = +rc.dataset.i, p = pts[i], r = p.r;
+      xh.setAttribute('x1', XC(i)); xh.setAttribute('x2', XC(i)); xh.setAttribute('visibility', 'visible');
+      const tot = ids.reduce((s, id) => s + (r.vues[id] || 0), 0);
+      let h = `<div class="t">${esc(dLong(r.jour))}</div>`;
+      h += ids.map(id => `<div class="r"><span><i class="dot" style="background:${accCol(id)}"></i>${esc(accShort(id))}${r.estime[id] ? ' <span class="muted">(estimé)</span>' : ''}</span><b>${r.vues[id] == null ? '–' : fmt(r.vues[id])}</b></div>`).join('');
+      h += `<div class="r"><span>Total du jour</span><b>${fmt(tot)}</b></div>`;
+      if (cum) h += `<div class="r"><span>Cumul vues</span><b>${fmt(p.total)}</b></div>`;
+      if (r.inst) {
+        h += `<div class="r" style="margin-top:4px"><span><i class="dot" style="background:var(--ink)"></i>Installs du jour</span><b>${fmt(r.inst.total)}</b></div>`;
+        h += `<div class="muted" style="font-size:12px">FR ${r.inst.fr} · ES ${r.inst.es} · IT ${r.inst.it} · autres ${r.inst.autres}${tot > 0 ? ` · ${fmt(r.inst.total / tot * 1000, 1)} pour 1 000 vues` : ''}</div>`;
+        if (cum) h += `<div class="r"><span>Cumul installs</span><b>${fmt(p.inst)}</b></div>`;
+      } else h += `<div class="muted" style="font-size:12px;margin-top:4px">Installs pas encore relevés ce jour-là</div>`;
+      if (r.posts.length) h += `<div style="margin-top:6px;font-size:12px">${r.posts.map(q => `<div><b>${esc(accShort(q.compte))}</b> ${esc(q.poste_le.slice(11, 16))} · ${esc(pName(q))}</div>`).join('')}</div>`;
+      showTip(h, ev);
+    });
+    rc.addEventListener('mouseleave', () => { xh.setAttribute('visibility', 'hidden'); hideTip(); });
+  });
+}
+$('gMode').querySelectorAll('button').forEach(b => b.onclick = () => { gMode = b.dataset.m; savePref('stats-gmode', gMode); renderGlobal(); });
+$('gSpan').querySelectorAll('button').forEach(b => b.onclick = () => { gSpan = +b.dataset.s; savePref('stats-gspan', gSpan); renderGlobal(); });
+
+// ------------------------------------------------------------ planning (emploi du temps des posts)
+const carOf = cle => (PL?.carrousels || []).find(c => c.cle === cle);
+const thumb = c => c && c.etat !== 'a_fabriquer' ? `/api/couverture?c=${encodeURIComponent(c.cle)}` : null;
+const toeicWarn = c => c && c.toeic && c.compte !== 'fr';
+const carLabel = c => c ? `${PREFIX[c.compte] || ''}${c.compte === 'fr' ? '' : ' '}${c.num}` : '?';
+const PREFIX = { fr: 'J', en: 'EN', es: 'ES' };
+const slotTime = (d, h) => new Date(d + 'T' + h);
+function postsOf(acc, d) { return (PL?.posts || []).filter(p => p.compte === acc && (p.poste_le || '').slice(0, 10) === d).sort((a, b) => a.poste_le.localeCompare(b.poste_le)); }
+// un créneau est « fait » si un vrai post du compte est sorti à moins de 3 h de lui ce jour-là
+const covered = (acc, d, h) => postsOf(acc, d).some(p => Math.abs(new Date(p.poste_le.replace(' ', 'T')) - slotTime(d, h)) < 3 * 3600e3);
+const planAt = (acc, d, h) => (PL?.plan || []).find(x => x.compte === acc && x.date === d && x.heure === h);
+
+function renderPlanning() {
+  if (VIEW !== 'tout') return;
+  if (!PL) { $('edt').innerHTML = '<p class="empty">Planning indisponible.</p>'; $('stock').innerHTML = ''; return; }
+  const today = todayIso(), days = [...Array(7).keys()].map(i => addD(today, i - 1)), now = new Date();
+  const ids = PL.comptes.map(c => c.id);
+  let h = '<span></span>' + days.map(d => `<div class="dh${d === today ? ' today' : ''}">${d === today ? "Aujourd'hui" : d === addD(today, 1) ? 'Demain' : esc(cap(dShort(d)))}</div>`).join('');
+  ids.forEach(acc => {
+    h += `<div class="rh"><i style="background:${accCol(acc)}"></i>${esc(accShort(acc))}</div>`;
+    days.forEach(d => {
+      const items = [];
+      postsOf(acc, d).forEach(p => items.push({ t: p.poste_le.slice(11, 16), html: `<div class="chip done" title="${esc(p.nom || p.description || '')}"><b>✓ ${esc(p.poste_le.slice(11, 16))}</b><span>${esc(pName(p))} · ${short(p.vues)}</span></div>` }));
+      const hours = [...new Set([...(PL.creneaux[acc] || []), ...(PL.plan || []).filter(x => x.compte === acc && x.date === d).map(x => x.heure)])].sort();
+      hours.forEach(hh => {
+        const x = planAt(acc, d, hh), c = x && carOf(x.carrousel);
+        if (x) {
+          const warn = !c || c.etat === 'a_fabriquer' || toeicWarn(c);
+          const why = !c ? 'carrousel introuvable' : c.etat === 'a_fabriquer' ? 'pas encore fabriqué' : toeicWarn(c) ? 'TOEIC : déconseillé sur ce compte' : 'prêt';
+          items.push({ t: hh, html: `<div class="chip plan${warn ? ' warn' : ''}" title="${esc((c?.titre || x.carrousel) + ' · ' + why)}">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : ''}<b>${esc(hh)}</b><span>${esc(carLabel(c))}${c?.etat === 'a_fabriquer' ? ' · à fabriquer' : ''}</span><button type="button" class="x" data-del="${esc(acc)}|${d}|${hh}" aria-label="Retirer du planning">×</button></div>` });
+        } else if (slotTime(d, hh) > now && !covered(acc, d, hh)) {
+          items.push({ t: hh, html: `<button type="button" class="slot" data-slot="${esc(acc)}|${d}|${hh}">+ ${esc(hh)}</button>` });
+        }
+      });
+      items.sort((a, b) => a.t.localeCompare(b.t));
+      h += `<div class="cell${d === today ? ' today' : ''}${d < today ? ' past' : ''}">${items.map(i => i.html).join('')}</div>`;
+    });
+  });
+  $('edt').style.gridTemplateColumns = '';
+  $('edt').innerHTML = h;
+  $('edt').querySelectorAll('[data-slot]').forEach(b => b.onclick = ev => { ev.stopPropagation(); openPicker(b, ...b.dataset.slot.split('|')); });
+  $('edt').querySelectorAll('[data-del]').forEach(b => b.onclick = async ev => { ev.stopPropagation(); const [acc, d, hh] = b.dataset.del.split('|'); await planPost({ action: 'retirer', compte: acc, date: d, heure: hh }); });
+
+  // carrousels pas encore postés
+  const todo = (PL.carrousels || []).filter(c => c.etat !== 'poste').sort((a, b) => ids.indexOf(a.compte) - ids.indexOf(b.compte) || a.num - b.num);
+  $('stock').innerHTML = todo.length ? todo.map(c => {
+    const x = (PL.plan || []).find(p => p.carrousel === c.cle);
+    const tags = (c.etat === 'pret' ? `<span class="tag ok">Prêt · ${c.slides} slides</span>` : '<span class="tag todo">Prompt écrit, à fabriquer</span>') +
+      (x ? `<span class="tag pen">Prévu ${esc(dShort(x.date))} à ${esc(x.heure.replace(':', 'h'))}</span>` : '<span class="tag todo">Pas encore placé</span>') +
+      (toeicWarn(c) ? '<span class="tag warn" title="Le 23/11, les posts TOEIC du compte ont été montrés à des Français">TOEIC : déconseillé ici</span>' : '');
+    return `<div class="scard">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : '<div class="ph">À fabriquer</div>'}<div style="min-width:0"><b><span style="color:${accCol(c.compte)}">●</span> ${esc(carLabel(c))}</b><p title="${esc(c.titre)}">${esc(c.titre)}</p>${tags}</div></div>`;
+  }).join('') : '<p class="muted" style="margin:0;font-size:14px">Rien de prêt à poster : demande le prochain prompt à Claude.</p>';
+  renderHoursEd();
+}
+
+function openPicker(btn, acc, d, hh) {
+  const pk = $('picker');
+  const cands = (PL.carrousels || []).filter(c => c.compte === acc && c.etat !== 'poste').sort((a, b) => (a.etat === 'pret' ? 0 : 1) - (b.etat === 'pret' ? 0 : 1) || a.num - b.num);
+  pk.innerHTML = `<div class="ph-t">${esc(accShort(acc))} · ${esc(dShort(d))} à ${esc(hh.replace(':', 'h'))}</div>` + (cands.length ? cands.map(c => {
+    const x = (PL.plan || []).find(p => p.carrousel === c.cle);
+    const sub = [c.etat === 'pret' ? 'prêt' : 'à fabriquer', x ? `déjà prévu ${dShort(x.date)} (il sera déplacé)` : '', toeicWarn(c) ? 'TOEIC : déconseillé ici' : ''].filter(Boolean).join(' · ');
+    return `<button type="button" class="it" data-c="${esc(c.cle)}">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : '<span class="noimg"></span>'}<span><b>${esc(carLabel(c))}</b> ${esc(cut(c.titre, 46))}<small>${esc(sub)}</small></span></button>`;
+  }).join('') : '<p class="muted" style="margin:6px;font-size:13px">Aucun carrousel prêt pour ce compte.</p>');
+  pk.hidden = false;
+  const r = btn.getBoundingClientRect(), w = pk.offsetWidth, ht = pk.offsetHeight;
+  pk.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left)) + 'px';
+  pk.style.top = (r.bottom + ht + 8 > innerHeight ? Math.max(8, r.top - ht - 6) : r.bottom + 6) + 'px';
+  pk.querySelectorAll('[data-c]').forEach(b => b.onclick = async () => { pk.hidden = true; await planPost({ action: 'placer', compte: acc, date: d, heure: hh, carrousel: b.dataset.c }); });
+}
+document.addEventListener('click', e => { if (!$('picker').hidden && !$('picker').contains(e.target)) $('picker').hidden = true; });
+addEventListener('keydown', e => { if (e.key === 'Escape') $('picker').hidden = true; });
+addEventListener('scroll', () => { $('picker').hidden = true; }, true);
+
+async function planPost(body) {
+  const r = await fetch('/api/planning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) { toast(d.error || 'Impossible'); return false; }
+  await loadPlanning();
+  return true;
+}
+
+// « Proposer un planning » : les carrousels prêts vont dans les prochains créneaux libres de leur compte
+$('fillBtn').onclick = async () => {
+  if (!PL) return;
+  const today = todayIso(), now = new Date(), add = [];
+  let skipped = 0;
+  PL.comptes.forEach(({ id: acc }) => {
+    const planned = new Set((PL.plan || []).map(x => x.carrousel));
+    const cands = (PL.carrousels || []).filter(c => c.compte === acc && c.etat !== 'poste' && !planned.has(c.cle))
+      .filter(c => { if (toeicWarn(c)) { skipped++; return false; } return true; })
+      .sort((a, b) => (a.etat === 'pret' ? 0 : 1) - (b.etat === 'pret' ? 0 : 1) || a.num - b.num);
+    const free = [];
+    for (let i = 0; i < 7; i++) {
+      const d = addD(today, i);
+      (PL.creneaux[acc] || []).forEach(hh => { if (slotTime(d, hh) > now && !planAt(acc, d, hh) && !covered(acc, d, hh)) free.push([d, hh]); });
+    }
+    cands.forEach((c, i) => { if (free[i]) add.push({ date: free[i][0], heure: free[i][1], compte: acc, carrousel: c.cle }); });
+  });
+  if (!add.length) { toast(skipped ? `Rien à placer (${skipped} carrousel TOEIC laissé de côté sur EN/ES)` : 'Rien à placer : tout est déjà prévu'); return; }
+  if (await planPost({ action: 'remplir', plan: add })) toast(`${add.length} carrousel${add.length > 1 ? 's placés' : ' placé'}${skipped ? ` · ${skipped} TOEIC laissé${skipped > 1 ? 's' : ''} de côté sur EN/ES` : ''}`, 5000);
+};
+
+// horaires des créneaux de chaque compte
+$('hoursBtn').onclick = () => { const ed = $('hoursEd'); ed.hidden = !ed.hidden; $('hoursBtn').setAttribute('aria-expanded', !ed.hidden); };
+function renderHoursEd() {
+  if (!PL) return;
+  $('hoursEd').innerHTML = PL.comptes.map(c => `<label>${esc(accShort(c.id))} : heures des posts<input data-h="${esc(c.id)}" value="${esc((PL.creneaux[c.id] || []).join(', '))}" placeholder="12:00, 19:30"></label>`).join('') +
+    `<button type="button" class="btn btn-primary" id="hoursSave">Enregistrer</button><span class="muted" style="font-size:12px;align-self:center">Format 12:00, séparées par des virgules.</span>`;
+  $('hoursSave').onclick = async () => {
+    for (const inp of $('hoursEd').querySelectorAll('[data-h]')) {
+      const hs = inp.value.split(/[,;\s]+/).filter(Boolean).map(s => { const m = s.match(/^(\d{1,2})[:h]?(\d{2})?$/); return m ? String(+m[1]).padStart(2, '0') + ':' + (m[2] || '00') : null; });
+      if (hs.some(x => !x || +x.slice(0, 2) > 23 || +x.slice(3) > 59) || !hs.length) { toast(`Heures invalides pour ${accShort(inp.dataset.h)}`); return; }
+      const r = await fetch('/api/planning', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'creneaux', compte: inp.dataset.h, heures: hs }) });
+      if (!r.ok) { toast((await r.json().catch(() => ({}))).error || 'Impossible'); return; }
+    }
+    toast('Horaires enregistrés ✓'); $('hoursEd').hidden = true; $('hoursBtn').setAttribute('aria-expanded', 'false'); await loadPlanning();
+  };
+}
+
 // ------------------------------------------------------------ données
 async function loadRuns(pick) {
   const r = await (await fetch('/api/runs?account=' + ACC)).json();
@@ -764,7 +1205,8 @@ async function loadRuns(pick) {
 async function loadData(run) {
   const res = await fetch('/api/data?account=' + ACC + (run ? '&run=' + encodeURIComponent(run) : ''));
   const d = await res.json();
-  $('layout').hidden = !res.ok;  // pas de relevé pour ce compte : rien d'un autre compte à l'écran
+  $('layout').hidden = !res.ok || VIEW === 'tout';  // pas de relevé pour ce compte : rien d'un autre compte à l'écran
+  if (VIEW === 'tout') { D = res.ok ? d : null; return; }
   if (!res.ok) {
     D = null;
     $('status').textContent = ACC !== 'fr' || AJOUT ? `Aucun relevé pour ${accName(ACC)} : connecte le compte (${AJOUT ? 'menu ⋯ > Reconnecter ce compte' : 'connecter-chrome-en.bat'}), puis clique « Mettre à jour ».` : d.error;
@@ -777,6 +1219,7 @@ async function loadData(run) {
   const old = $('runSel').selectedIndex > 0 ? ' · <b>ancien relevé</b>' : '';
   $('status').innerHTML = `${esc(accName(ACC))} · stats relevées <b>${ago}</b>${old}`;
   redraw();
+  loadChaleur();
 }
 $('runSel').onchange = () => { $('menu').open = false; loadData($('runSel').value); };
 document.addEventListener('click', e => { if (!$('menu').contains(e.target)) $('menu').open = false; });
@@ -809,20 +1252,25 @@ async function watch() {
   showJob(j);
   if (j.running) { $('refreshBtn').disabled = true; poll = setTimeout(watch, 1000); return; }
   idleBtn();
-  if (j.code === 0 && poll !== 'idle') { await loadRuns(); await loadData($('runSel').value); toast('Stats à jour ✓'); }
+  if (poll !== 'idle' && (j.code === 0 || j.account === 'tous')) {
+    await loadRuns(); await loadData($('runSel').value);
+    if (VIEW === 'tout') await Promise.all([loadGlobal(), loadPlanning()]);
+    toast(j.code === 0 ? 'Stats à jour ✓' : 'Stats à jour, sauf un compte (voir le message)');
+  }
   poll = 'idle';
 }
 $('refreshBtn').onclick = async () => {
   $('refreshBtn').disabled = true; $('refreshBtn').innerHTML = '<span class="spin"></span> <span class="upd-label">Relevé…</span>';
   const n = $('nSel').value;
-  const r = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: n === 'all' ? 'all' : +n, account: ACC }) });
+  const r = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: n === 'all' ? 'all' : +n, account: VIEW === 'tout' ? 'tous' : ACC }) });
   if (!r.ok) { const d = await r.json().catch(() => ({})); toast(d.error || 'Impossible de lancer le relevé'); idleBtn(); return; }
   poll = null; watch();
 };
 
 (async () => {
   try {
-    await loadAccs(); await loadRuns(); await loadData($('runSel').value);
+    await loadAccs(); await loadRuns();
+    if (VIEW === 'tout') { await openDash(); loadData($('runSel').value); } else { showView(); await loadData($('runSel').value); }
     const j = await (await fetch('/api/refresh')).json();
     if (j.running) { $('refreshBtn').disabled = true; poll = null; watch(); }
   } catch (e) { $('status').textContent = 'Le serveur ne répond pas : relance « Stats TikTok ».'; }
