@@ -25,6 +25,7 @@ PAGE = HERE / "stats-page"
 sys.path.insert(0, str(HERE))
 import comptes  # noqa: E402  (liste des comptes, profil et dossier de relevés de chacun)
 import tableau  # noqa: E402  (vue d'ensemble : vues des comptes, installs, planning)
+import blip  # noqa: E402  (envoi des carrousels sur l'iPhone par Blip)
 
 OUT = comptes.sortie("fr")  # compte par défaut
 
@@ -82,17 +83,16 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
         py = Path(sys.executable)
         py = py.with_name("python.exe") if py.name.lower() == "pythonw.exe" and py.with_name("python.exe").exists() else py
         code = 0
-        for a in accs:
+        def un(a: str) -> tuple[int, bool]:
+            deco = False
             cmd = [str(py), "-u", str(HERE / "scrap_stats.py"), "--account", a, *args]
-            if len(accs) > 1:
-                with lock:
-                    job["lines"].append(f"--- compte {a} ---")
             try:
                 p = subprocess.Popen(cmd, cwd=HERE, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
                                      text=True, encoding="utf-8", errors="replace",
                                      env={**os.environ, "PYTHONIOENCODING": "utf-8"},  # sinon « connect� »
                                      creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
                 for line in p.stdout:
+                    deco = deco or "Pas connecté" in line
                     with lock:
                         job["lines"].append(line.rstrip())
                         job["lines"] = job["lines"][-200:]
@@ -101,6 +101,18 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
                 with lock:
                     job["lines"].append(f"Erreur : {e}")
                 c = -1
+            return c, deco
+
+        for a in accs:
+            if len(accs) > 1:
+                with lock:
+                    job["lines"].append(f"--- compte {a} ---")
+            c, deco = un(a)
+            if c != 0 and deco:  # parfois faux juste après le compte précédent : un 2e essai, 10 s plus tard
+                with lock:
+                    job["lines"].append("Nouvel essai dans 10 s…")
+                time.sleep(10)
+                c, _ = un(a)
             code = code or c  # un compte qui échoue n'empêche pas les suivants
         with lock:
             job.update(running=False, code=code, ended=time.time())
@@ -140,7 +152,11 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/global":  # vue d'ensemble : vues par jour des comptes + installs PostHog
             return self.json(tableau.global_data())
         if path == "/api/planning":
-            return self.json(tableau.planning_get())
+            d = tableau.planning_get()
+            if blip.dispo():
+                e = blip.etat()
+                d["blip"] = {"auto": e["auto"], "envois": e["envois"], "iphone": (blip.iphone() or {}).get("nom")}
+            return self.json(d)
         if path == "/api/couverture":
             f = tableau.couverture(params.get("c", ""))
             if not f:
@@ -206,7 +222,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, f.read_bytes(), ctype + "; charset=utf-8")
 
     def do_POST(self):
-        if self.path not in ("/api/refresh", "/api/comptes", "/api/planning") or not self.same_origin():
+        if self.path not in ("/api/refresh", "/api/comptes", "/api/planning", "/api/blip") or not self.same_origin():
             return self.json({"error": "refusé"}, 403)
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
@@ -214,6 +230,12 @@ class Handler(BaseHTTPRequestHandler):
             body = {}
         if self.path == "/api/comptes":
             return self.comptes_post(body)
+        if self.path == "/api/blip":
+            if body.get("action") == "auto":
+                blip.regler_auto(bool(body.get("on")))
+                return self.json({"ok": True})
+            r = blip.envoyer(str(body.get("cle", "")))
+            return self.json(r, 400 if r.get("error") else 200)
         if self.path == "/api/planning":
             r = tableau.planning_post(body if isinstance(body, dict) else {})
             return self.json(r, 400 if r.get("error") else 200)
@@ -262,6 +284,7 @@ def main():
             webbrowser.open(url)
         return
     print(f"Stats TikTok : {url}   (Ctrl+C pour arrêter)", flush=True)
+    blip.boucle(lambda: tableau.planning_get()["plan"])  # envoi auto des carrousels du jour sur l'iPhone
     if not a.no_open:
         threading.Timer(0.6, lambda: webbrowser.open(url)).start()
     try:

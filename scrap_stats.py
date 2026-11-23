@@ -207,13 +207,26 @@ class Studio:
             raise
         # Chrome charge ses cookies depuis le disque un peu après le lancement : sans attente, un compte
         # bien connecté passait parfois pour « pas connecté » (ES, 23 nov. 17h55, réussi 2 min plus tard).
+        connecte = lambda: any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com"))
         for _ in range(8):
-            if any(c["name"] == "sessionid" and c["value"] for c in self.ctx.cookies("https://www.tiktok.com")):
+            if connecte():
                 break
             time.sleep(1.5)
         else:
-            self.ctx.close()
-            sys.exit(f"Pas connecté à TikTok dans ce profil : {CONNEXION}.")
+            # Encore rien (ES, 23 nov. 19h27, alors que le profil était bien connecté) : on ouvre Studio,
+            # ce qui force Chrome à charger le profil, puis on revérifie avant d'abandonner.
+            try:
+                pg = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
+                pg.goto(STUDIO, wait_until="domcontentloaded", timeout=60000)
+            except Exception:
+                pass
+            for _ in range(6):
+                if connecte():
+                    break
+                time.sleep(1.5)
+            else:
+                self.ctx.close()
+                sys.exit(f"Pas connecté à TikTok dans ce profil : {CONNEXION}.")
         self.page = self.ctx.pages[0] if self.ctx.pages else self.ctx.new_page()
         self.captured: list[dict] = []
         self.insight_template: str | None = None

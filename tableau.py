@@ -68,7 +68,7 @@ def _lire_compte(acc: str) -> dict:
                 jours[(at - dt.timedelta(days=int(m.group(1)) + 1)).isoformat()] = int(x["valeur"])
         for s in d.get("summary", []):
             posts[s["id"]] = {"id": s["id"], "poste_le": s.get("poste_le"), "vues": s.get("vues"),
-                              "completion": s.get("completion_%"), "description": (s.get("description") or "")[:90]}
+                              "completion": s.get("completion_%"), "description": (s.get("description") or "")[:300]}
         for h in d.get("hours", []):
             if h.get("heure") and h.get("vues") is not None:
                 heures[(h["id"], h["heure"])] = h["vues"]
@@ -169,7 +169,54 @@ def _carrousels(acc: str, postes: dict[int, dict]) -> list[dict]:
 def _plan() -> dict:
     p = _json(PLANNING, {})
     cr = {**CRENEAUX, **(p.get("creneaux") or {})}
-    return {"creneaux": cr, "plan": [x for x in p.get("plan", []) if isinstance(x, dict)]}
+    return {"creneaux": cr, "plan": [x for x in p.get("plan", []) if isinstance(x, dict)],
+            "masques": [str(x) for x in p.get("masques", []) if isinstance(x, str)]}
+
+
+def _norm(t: str) -> str:
+    return re.sub(r"\s+", " ", re.sub(r"[^\w%()?,.'’ -]", " ", (t or "").lower())).strip()
+
+
+def _auto_noms(acc: str, posts: dict, noms: dict) -> dict:
+    """Un post sans nom dont la légende est celle d'un carrousel récent du compte reçoit son nom
+    (« J76 · hiver »), sans attendre Claude. Le post doit être sorti après la fabrication du carrousel."""
+    dossier = DOSSIER.get(acc)
+    base = RACINE / dossier if dossier else None
+    libres = [x for x in posts.values() if x["id"] not in noms and x.get("poste_le") and x.get("description")]
+    if not base or not base.is_dir() or not libres:
+        return noms
+    pris = {_num(n, acc) for n in noms.values()}
+    ajout = {}
+    maintenant = dt.datetime.now().timestamp()
+    for f in base.iterdir():
+        m = re.fullmatch(r"carrousel-0*(\d+)", f.name)
+        info = f / "POST.json"
+        if not m or int(m.group(1)) in pris or not info.exists() or maintenant - info.stat().st_mtime > RECENT_J * 86400:
+            continue
+        n, meta = int(m.group(1)), _json(info, {})
+        cap = _norm(meta.get("caption") or "")
+        if len(cap) < 25:
+            continue
+        cree = dt.datetime.fromtimestamp(info.stat().st_mtime) - dt.timedelta(hours=1)
+        for x in libres:
+            desc = _norm(x["description"])
+            k = min(len(desc), len(cap), 120)
+            if k >= 25 and desc[:k] == cap[:k] and dt.datetime.fromisoformat(x["poste_le"].replace(" ", "T")) >= cree                     and x["id"] not in ajout:
+                pngs = sorted(f.glob("*.png"))
+                nom_png = pngs[0].name.lower() if pngs else ""
+                sm = re.search(r"escalier-([a-z0-9-]+?)-01-", nom_png) or re.search(r"^vocly-\d+(?:-(?:en|es))?-([a-z0-9-]+?)-01-", nom_png)
+                sujet = (sm.group(1).replace("-", " ") if sm else (meta.get("titre") or "")[:30])
+                num = str(n).zfill(2) if acc == "es" else str(n)
+                ajout[x["id"]] = f"{PREFIXE[acc]}{'' if acc == 'fr' else ' '}{num} · {sujet} (auto)"
+                break
+    if ajout:
+        with _lock:
+            tout = {**_json(NOMS, {}), **ajout}
+            tmp = NOMS.with_suffix(".tmp")
+            tmp.write_text(json.dumps(tout, ensure_ascii=False, indent=2), "utf-8")
+            tmp.replace(NOMS)
+        noms = {**noms, **ajout}
+    return noms
 
 
 def _ecrire(p: dict):
@@ -185,6 +232,7 @@ def planning_get() -> dict:
     cars, posts = [], []
     for c in cs:
         d = _lire_compte(c["id"])
+        noms = _auto_noms(c["id"], d["posts"], noms)
         postes = {}
         for x in d["posts"].values():
             n = _num(noms.get(x["id"]), c["id"])
@@ -205,9 +253,12 @@ def planning_get() -> dict:
         with _lock:
             _ecrire(p)
     faits = {c["cle"] for c in cars if c["etat"] == "poste"}
-    plan = [x for x in p["plan"] if x.get("carrousel") not in faits]  # un carrousel posté sort du planning
+    masques = set(p["masques"])
+    plan = [x for x in p["plan"] if x.get("carrousel") not in faits | masques]  # un carrousel posté sort du planning
+    cars = [c for c in cars if c["cle"] not in masques]
     posts = [x for x in posts if x.get("poste_le") and x["poste_le"] >= (dt.date.today() - dt.timedelta(days=7)).isoformat()]
-    return {"comptes": cs, "creneaux": p["creneaux"], "plan": plan, "carrousels": cars, "posts": posts}
+    return {"comptes": cs, "creneaux": p["creneaux"], "plan": plan, "carrousels": cars, "posts": posts,
+            "masques": len(masques)}
 
 
 def planning_post(body: dict) -> dict:
@@ -224,6 +275,13 @@ def planning_post(body: dict) -> dict:
                 if not re.fullmatch(r"(fr|en|es)/(carrousel|prompt)-\d+", car):
                     return {"error": "Carrousel inconnu."}
                 p["plan"].append({"date": date, "heure": heure, "compte": acc, "carrousel": car})
+        elif a == "masquer":  # « × » sur une carte : sort de la liste et du planning (posté ailleurs, abandonné…)
+            if not re.fullmatch(r"(fr|en|es)/(carrousel|prompt)-\d+", car):
+                return {"error": "Carrousel inconnu."}
+            p["masques"] = sorted(set(p["masques"]) | {car})
+            p["plan"] = [x for x in p["plan"] if x.get("carrousel") != car]
+        elif a == "demasquer":
+            p["masques"] = []
         elif a == "creneaux":
             hs = sorted({h for h in body.get("heures", []) if re.fullmatch(r"\d\d:\d\d", str(h))})
             if not comptes.existe(acc) or not hs or len(hs) > 6:
