@@ -71,8 +71,9 @@ def complete_auto(d: dict, acc: str = "fr"):
 
 
 def start_refresh(args: list[str], acc: str = "fr") -> bool:
-    """acc = un compte, ou « tous » : les comptes l'un après l'autre (vue d'ensemble)."""
-    accs = [c["id"] for c in comptes.liste()] if acc == "tous" else [acc]
+    """acc = un compte, « tous » (vue d'ensemble), ou plusieurs séparés par des virgules (« en,es » :
+    relevé rapide du bouton Actualiser du planning)."""
+    accs = [c["id"] for c in comptes.liste()] if acc == "tous" else [a for a in acc.split(",") if comptes.existe(a)] or ["fr"]
     with lock:
         if job["running"]:
             return False
@@ -148,7 +149,7 @@ class Handler(BaseHTTPRequestHandler):
             d = tableau.planning_get()
             if blip.dispo():
                 e = blip.etat()
-                d["blip"] = {"auto": e["auto"], "envois": e["envois"], "iphone": (blip.iphone() or {}).get("nom")}
+                d["blip"] = {"auto": e["auto"], "envois": e["envois"], "appareils": {c["id"]: (blip.appareil(c["id"]) or {}).get("nom") for c in comptes.liste()}}
             return self.json(d)
         if path == "/api/couverture":
             f = tableau.couverture(params.get("c", ""))
@@ -173,7 +174,10 @@ class Handler(BaseHTTPRequestHandler):
                 return self.json({"error": "Aucun relevé : clique sur « Mettre à jour »."}, 404)
             d = json.loads(f.read_text("utf-8"))
             d["run"] = f.parent.name
-            if f.parent.name.endswith("-auto"):
+            # Relevé partiel (auto, ou rapide « --last 2 » du bouton Actualiser du planning) : on complète
+            # avec les autres posts tels que vus dans leur relevé le plus récent, sinon la liste n'en montre que 2.
+            rs = runs(acc)
+            if f.parent.name.endswith("-auto") or (rs and f.parent.name == rs[0]["name"]):
                 complete_auto(d, acc)
             import predict
             return self.json(predict.add_real_age(d))
@@ -237,7 +241,8 @@ class Handler(BaseHTTPRequestHandler):
         if body.get("compte") is False:
             args.append("--no-compte")
         acc = body.get("account", "fr")
-        if not start_refresh(args, acc if acc == "tous" or comptes.existe(acc) else "fr"):
+        ok = acc == "tous" or all(comptes.existe(a) for a in str(acc).split(","))
+        if not start_refresh(args, acc if ok else "fr"):
             return self.json({"error": "Un relevé est déjà en cours."}, 409)
         self.json({"ok": True})
 

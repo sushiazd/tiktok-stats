@@ -3,9 +3,11 @@ Envoi d'un carrousel sur l'iPhone avec Blip, sans clic.
 
 Blip (Windows) accepte en ligne de commande :  blip.exe --peer <appareil> --file <f1> --file <f2> ...
 L'application déjà ouverte reçoit la demande et lance le transfert tout de suite.
-L'iPhone est celui que Blip propose en premier dans son menu « Envoyer avec Blip » (le dernier utilisé).
+Chaque compte a son appareil : celui dont le nom dans Blip finit par « - FR », « - EN », « - ES » ou « - IT »
+(par exemple « iPhone - FR », « Tablette - EN »). Sans ça : blip-envois.json >
+"appareils", puis la table APPAREILS, puis celui que Blip propose en premier.
 
-On envoie les slides PNG (01 à 12) et POSTER.txt (la légende à coller), pas les illustrations sources.
+On envoie le dossier entier du carrousel (slides, POSTER.txt, POST.json, illustrations), comme à la main.
 
 Envoi auto (activé par défaut, comptes FR et EN) : toutes les 2 min, chaque carrousel placé au planning pour aujourd'hui
 ou demain, rendu depuis plus de 2 min et pas encore envoyé, part tout seul sur l'iPhone.
@@ -27,7 +29,7 @@ RACINE = HERE.parent
 ETAT = HERE / "blip-envois.json"  # {"auto": bool, "envois": {cle: {"le", "fichiers", "vers", "auto"}}}
 _lock = threading.Lock()
 STABLE_S = 120  # un dossier encore en cours de rendu par Antigravity ne part pas
-AUTO_COMPTES = ("fr", "en")  # postés depuis ton iPhone ; ES est posté par ton ami (bouton manuel seulement)
+AUTO_COMPTES = ("fr", "en", "es", "it")  # chaque compte va sur l'appareil Blip nommé « … - FR / - EN / - ES / - IT »
 
 
 def _exe() -> Path | None:
@@ -40,6 +42,38 @@ def _exe() -> Path | None:
 def _shell_dir() -> Path | None:
     base = Path(os.environ.get("LOCALAPPDATA", "")) / "BlipShell"
     return next((d for d in base.glob("BlipStudioInc.BlipApp_*") if d.is_dir()), None) if base.is_dir() else None
+
+
+# Repli si aucun appareil de Blip ne porte le suffixe du compte (noms du 24/11 vers 20 h).
+APPAREILS: dict = {}
+
+
+def _appareils_blip() -> list[dict]:
+    """Les appareils connus de Blip (nom + peerId)."""
+    d = _shell_dir()
+    out: list[dict] = []
+    if not d:
+        return out
+    for f, cle in (("shell-settings.json", "devices"), ("suggestions.json", "recipients")):
+        try:
+            items = json.loads((d / f).read_text("utf-8")).get(cle) or []
+        except Exception:
+            continue
+        for x in items:
+            if x.get("peerId") and not any(y["peerId"] == x["peerId"] for y in out):
+                out.append({"peerId": x["peerId"], "nom": x.get("name") or ""})
+    return out
+
+
+def appareil(acc: str) -> dict | None:
+    """L'appareil où l'on poste ce compte : celui dont le nom Blip finit par « - FR », « - EN », « - ES », « - IT »
+    (renommer l'appareil dans Blip suffit) ; sinon blip-envois.json > "appareils", sinon APPAREILS."""
+    suf = f"- {acc.upper()}"
+    for x in _appareils_blip():
+        if x["nom"].strip().upper().endswith(suf):
+            return x
+    a = {**APPAREILS, **(etat().get("appareils") or {})}.get(acc)
+    return a if a and a.get("peerId") else iphone()
 
 
 def iphone() -> dict | None:
@@ -67,7 +101,7 @@ def etat() -> dict:
         e = json.loads(ETAT.read_text("utf-8"))
     except Exception:
         e = {}
-    return {"auto": e.get("auto", True), "envois": e.get("envois") or {}}
+    return {"auto": e.get("auto", True), "envois": e.get("envois") or {}, **({"appareils": e["appareils"]} if e.get("appareils") else {})}
 
 
 def _ecrire(e: dict):
@@ -83,30 +117,80 @@ def regler_auto(on: bool):
         _ecrire(e)
 
 
-def fichiers(cle: str) -> list[Path]:
-    if not re.fullmatch(r"(fr|en|es)/carrousel-\d+", cle or ""):
-        return []
+def dossier(cle: str) -> Path | None:
+    """Le dossier du carrousel, seulement s'il est rendu (au moins une slide PNG)."""
+    if not re.fullmatch(r"(fr|en|es|it)/carrousel-\d+", cle or ""):
+        return None
     d = (RACINE / cle).resolve()
-    if RACINE.resolve() not in d.parents or not d.is_dir():
-        return []
-    out = sorted(d.glob("*.png"))
-    if out and (d / "POSTER.txt").exists():
-        out.append(d / "POSTER.txt")
-    return out
+    if RACINE.resolve() not in d.parents or not d.is_dir() or not any(d.glob("*.png")):
+        return None
+    return d
+
+
+def fichiers(cle: str) -> list[Path]:
+    """Tous les fichiers du dossier (sert à compter et à voir si Antigravity a fini d'écrire)."""
+    d = dossier(cle)
+    return [f for f in d.rglob("*") if f.is_file()] if d else []
+
+
+COPIES = HERE / "envois-blip"  # copies gardées (Blip lit les fichiers pendant tout le transfert) ; pas dans LOCALAPPDATA, redirigé quand Claude lance l'envoi
+
+
+JOURS = ["lun", "mar", "mer", "jeu", "ven", "sam", "dim"]
+MOIS = ["janv", "févr", "mars", "avr", "mai", "juin", "juil", "août", "sept", "oct", "nov", "déc"]
+
+
+def _quand(cle: str) -> str:
+    """Date et heure prévues au planning (le prochain créneau, sinon le dernier) : « mar 24 nov 19h30 »."""
+    try:
+        plan = json.loads((HERE / "planning.json").read_text("utf-8")).get("plan") or []
+    except Exception:
+        return ""
+    autre = cle.replace("/carrousel-", "/prompt-")
+    xs = sorted((x for x in plan if x.get("carrousel") in (cle, autre) and x.get("date") and x.get("heure")),
+                key=lambda x: (x["date"], x["heure"]))
+    if not xs:
+        return ""
+    auj = dt.date.today().isoformat()
+    x = next((x for x in xs if x["date"] >= auj), xs[-1])
+    try:
+        d = dt.date.fromisoformat(x["date"])
+    except ValueError:
+        return ""
+    return f"{JOURS[d.weekday()]} {d.day} {MOIS[d.month - 1]} {x['heure'].replace(':', 'h')}"
+
+
+def nom_envoi(cle: str) -> str:
+    """Nom du dossier reçu sur le téléphone : « FR 78 - mar 24 nov 19h30 », « ES 04 » s'il n'est pas au planning."""
+    acc, n = cle.split("/")[0], cle.rsplit("-", 1)[-1]
+    num = n.zfill(2) if acc in ("es", "it") else str(int(n))
+    q = _quand(cle)
+    return f"{acc.upper()} {num}" + (f" - {q}" if q else "")
+
+
+def _copie_nommee(cle: str, d: Path) -> Path:
+    import shutil
+    cible = COPIES / nom_envoi(cle)
+    if cible.exists():
+        shutil.rmtree(cible)
+    shutil.copytree(d, cible)
+    return cible
 
 
 def envoyer(cle: str, auto: bool = False) -> dict:
-    exe, dest = _exe(), iphone()
+    exe, dest = _exe(), appareil(cle.split("/")[0])
     if not exe:
         return {"error": "Blip n'est pas installé sur ce PC."}
     if not dest:
         return {"error": "Aucun iPhone connu dans Blip : envoie une fois un fichier à la main avec Blip."}
-    fs = fichiers(cle)
-    if not fs:
+    d, fs = dossier(cle), fichiers(cle)
+    if not d:
         return {"error": "Carrousel introuvable ou pas encore rendu."}
-    cmd = [str(exe), "--peer", dest["peerId"]]
-    for f in fs:
-        cmd += ["--file", str(f)]
+    try:
+        d = _copie_nommee(cle, d)  # « IT 01 - inverno » plutôt que « carrousel-01 » sur le téléphone
+    except Exception:
+        pass
+    cmd = [str(exe), "--peer", dest["peerId"], "--file", str(d)]
     try:
         p = subprocess.Popen(cmd, creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0))
     except Exception as e:

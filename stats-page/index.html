@@ -342,7 +342,7 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
     <div class="nums">
       <div class="num"><div class="k">Vues</div><div class="v" id="nViews">–</div><div class="d" id="nViewsD"></div></div>
       <div class="num"><div class="k" id="nPredK">Prévu à 48 h</div><div class="v pen" id="nPred">–</div><div class="d" id="nPredD"></div></div>
-      <div class="num"><div class="k">Regardent jusqu'au bout</div><div class="v" id="nFinish">–</div><div class="d" id="nFinishD"></div></div>
+      <div class="num" title="Chiffre TikTok « regardé en entier » : la part des vues qui vont jusqu'à la fin du carrousel. Ce n'est pas le même calcul que « voient la dernière slide » (graphique slide par slide), qui compte aussi ceux qui partent dès qu'elle s'affiche."><div class="k">Regardent jusqu'au bout</div><div class="v" id="nFinish">–</div><div class="d" id="nFinishD"></div></div>
       <div class="num"><div class="k">Temps de visionnage moyen</div><div class="v" id="nWatch">–</div><div class="d" id="nWatchD"></div></div>
     </div>
 
@@ -437,7 +437,7 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
         </div>
         <div class="dash-ctl">
           <button type="button" class="btn" id="planRefresh" title="Relit les dossiers de carrousels et le planning, sans relever TikTok">↻ Actualiser</button>
-          <button type="button" class="btn" id="blipAuto" hidden title="Les carrousels FR et EN prévus aujourd'hui et demain partent tout seuls sur l'iPhone par Blip, dès qu'ils sont fabriqués (ES : bouton 📱 à la main)">📱 Envoi auto</button>
+          <button type="button" class="btn" id="blipAuto" hidden title="Les carrousels prévus aujourd'hui et demain partent tout seuls par Blip, dès qu'ils sont fabriqués, sur l'appareil Blip nommé « … - FR », « - EN », « - ES » ou « - IT »">📱 Envoi auto</button>
           <button type="button" class="btn" id="hoursBtn" aria-expanded="false">Horaires</button>
           <button type="button" class="btn btn-primary" id="fillBtn">Proposer un planning</button>
         </div>
@@ -675,10 +675,10 @@ function renderRetention(p) {
   const ser = [...ghosts];
   if (mine.length) ser.push({ name: shortName(p), color: 'var(--pen)', width: 3, end: true, points: mine });
   const xMax = Math.max(2, ...ser.flatMap(s => s.points.map(c => c[0])));
-  lineChart($('retChart'), { series: ser, xMin: 1, xMax, yMax: 100, xFmt: x => x === 1 ? 'cover' : x === xMax ? 'fin' : String(x), yFmt: (v, t) => fmt(v, t ? 1 : 0) + ' %', tipTitle: x => `Slide ${x}${x === 1 ? ' (couverture)' : x === xMax ? ' (dernière)' : ''}`, xTicks: [...Array(xMax).keys()].map(i => i + 1) });
+  lineChart($('retChart'), { series: ser, xMin: 1, xMax, yMax: 100, xFmt: x => x === 1 ? 'cover' : x === xMax ? 'fin' : String(x), yFmt: (v, t) => fmt(v, t ? 1 : 0) + ' %', tipTitle: x => `Slide ${x}${x === 1 ? ' (couverture)' : x === xMax ? ' (dernière) : ont vu la slide' : ''}`, xTicks: [...Array(xMax).keys()].map(i => i + 1) });
   const last = mine.length ? mine[mine.length - 1][1] : null;
   $('retLegend').innerHTML = mine.length
-    ? `<span><i></i>ce post : <b style="color:var(--ink-2)">${fmt(last, 0)} %</b> arrivent à la dernière slide</span><span><i class="ghost"></i>tes posts d'avant</span>`
+    ? `<span><i></i>ce post : <b style="color:var(--ink-2)">${fmt(last, 0)} %</b> voient la dernière slide</span><span title="TikTok compte ici tous ceux qui ont vu la dernière slide, même un instant. « Regardent jusqu'au bout » (en haut) ne compte que les vues allées jusqu'à la fin : les deux chiffres ne sont pas calculés pareil.">≠ « jusqu'au bout » ⓘ</span><span><i class="ghost"></i>tes posts d'avant</span>`
     : `<span>Ce post : pas encore calculé (≈ 36 h après le post).</span><span><i class="ghost"></i>tes posts d'avant</span>`;
 }
 
@@ -1097,33 +1097,34 @@ $('gSpan').querySelectorAll('button').forEach(b => b.onclick = () => { gSpan = +
 const carOf = cle => (PL?.carrousels || []).find(c => c.cle === cle);
 const thumb = c => c && c.etat !== 'a_fabriquer' ? `/api/couverture?c=${encodeURIComponent(c.cle)}&v=${encodeURIComponent(c.cree || '')}` : null;
 const toeicWarn = c => c && c.toeic && c.compte !== 'fr';
-const carLabel = c => c ? (c.compte === 'fr' ? `J${c.num}` : `${PREFIX[c.compte] || ''} ${c.compte === 'es' ? String(c.num).padStart(2, '0') : c.num}`) : '?';
-const PREFIX = { fr: 'J', en: 'EN', es: 'ES' };
+const carLabel = c => c ? (c.compte === 'fr' ? `J${c.num}` : `${PREFIX[c.compte] || ''} ${['es', 'it'].includes(c.compte) ? String(c.num).padStart(2, '0') : c.num}`) : '?';
+const PREFIX = { fr: 'J', en: 'EN', es: 'ES', it: 'IT' };
 const slotTime = (d, h) => new Date(d + 'T' + h);
 function postsOf(acc, d) { return (PL?.posts || []).filter(p => p.compte === acc && (p.poste_le || '').slice(0, 10) === d).sort((a, b) => a.poste_le.localeCompare(b.poste_le)); }
 // un créneau est « fait » si un vrai post du compte est sorti à moins de 3 h de lui ce jour-là
 const covered = (acc, d, h) => postsOf(acc, d).some(p => Math.abs(new Date(p.poste_le.replace(' ', 'T')) - slotTime(d, h)) < 3 * 3600e3);
-// Blip : envoi des carrousels sur l'iPhone (absent sur Mac / sans Blip)
+// Blip : envoi des carrousels sur l'appareil du compte, téléphone ou tablette (absent sur Mac / sans Blip)
+const devOf = c => (PL?.blip?.appareils || {})[c?.compte] || 'iPhone';
 const sentOf = c => c && PL?.blip?.envois?.[c.cle];
 const hm = iso => (iso || '').slice(11, 16).replace(':', 'h');
 const sentWhen = e => (e.le || '').slice(0, 10) === todayIso() ? `à ${hm(e.le)}` : `le ${dShort(e.le.slice(0, 10))} à ${hm(e.le)}`;
 function phoneBtn(c, chip) {
   if (!PL?.blip || !c || c.etat !== 'pret') return '';
   const e = sentOf(c);
-  if (chip) return e ? `<span class="ph sent" title="Envoyé sur l'${esc(PL.blip.iphone || 'iPhone')} ${esc(sentWhen(e))}${e.auto ? ' (auto)' : ''}">📱</span>`
-    : `<button type="button" class="ph" data-send="${esc(c.cle)}" title="Envoyer sur l'${esc(PL.blip.iphone || 'iPhone')} par Blip" aria-label="Envoyer sur l'iPhone">📱</button>`;
+  if (chip) return e ? `<span class="ph sent" title="Envoyé sur ${esc(e.vers === 'iPhone' ? "l'iPhone" : 'la ' + e.vers)} ${esc(sentWhen(e))}${e.auto ? ' (auto)' : ''}">📱</span>`
+    : `<button type="button" class="ph" data-send="${esc(c.cle)}" title="Envoyer sur la ${esc(devOf(c))} par Blip" aria-label="Envoyer sur la ${esc(devOf(c))}">📱</button>`;
   return e ? `<span class="tag ok">📱 Envoyé ${esc(sentWhen(e))}</span><button type="button" class="sendb" data-send="${esc(c.cle)}">Renvoyer</button>`
-    : `<button type="button" class="sendb" data-send="${esc(c.cle)}">📱 Envoyer sur l'iPhone</button>`;
+    : `<button type="button" class="sendb" data-send="${esc(c.cle)}">📱 Envoyer sur la ${esc(devOf(c))}</button>`;
 }
 async function sendPhone(b) {
   const c = carOf(b.dataset.send);
-  if (sentOf(c) && !confirm(`${carLabel(c)} est déjà sur l'iPhone. Le renvoyer ?`)) return;
+  if (sentOf(c) && !confirm(`${carLabel(c)} a déjà été envoyé. Le renvoyer sur la ${devOf(c)} ?`)) return;
   b.disabled = true;
   const r = await fetch('/api/blip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cle: b.dataset.send }) });
   const d = await r.json().catch(() => ({}));
   b.disabled = false;
   if (!r.ok) return toast(d.error || 'Envoi impossible');
-  toast(`${carLabel(c)} envoyé sur l'${d.vers || 'iPhone'} (${d.fichiers} fichiers) ✓ Ouvre Blip sur le téléphone.`, 4000);
+  toast(`${carLabel(c)} envoyé sur la ${d.vers || devOf(c)} (${d.fichiers} fichiers) ✓ Ouvre Blip dessus.`, 4000);
   plText = null; await loadPlanning();
 }
 function renderBlipAuto() {
@@ -1137,7 +1138,7 @@ function renderBlipAuto() {
 $('blipAuto').onclick = async () => {
   await fetch('/api/blip', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'auto', on: !PL.blip.auto }) });
   plText = null; await loadPlanning();
-  toast(PL.blip.auto ? "Envoi auto activé : les carrousels FR et EN prévus aujourd'hui et demain partent seuls sur l'iPhone." : 'Envoi auto coupé.', 3500);
+  toast(PL.blip.auto ? "Envoi auto activé : les carrousels FR et EN prévus aujourd'hui et demain partent seuls (FR sur le téléphone, EN sur la tablette)." : 'Envoi auto coupé.', 3500);
 };
 const planAt = (acc, d, h) => (PL?.plan || []).find(x => x.compte === acc && x.date === d && x.heure === h);
 
@@ -1152,7 +1153,7 @@ function renderPlanning() {
     days.forEach(d => {
       const items = [];
       postsOf(acc, d).forEach(p => items.push({ t: p.poste_le.slice(11, 16), html: `<div class="chip done" title="${esc(p.nom || p.description || '')}"><b>✓ ${esc(p.poste_le.slice(11, 16))}</b><span>${esc(pName(p))} · ${short(p.vues)}</span></div>` }));
-      const hours = [...new Set([...(PL.creneaux[acc] || []), ...(PL.plan || []).filter(x => x.compte === acc && x.date === d).map(x => x.heure)])].sort();
+      const hours = [...new Set([...(d < ((PL.debuts || {})[acc] || '') ? [] : PL.creneaux[acc] || []), ...(PL.plan || []).filter(x => x.compte === acc && x.date === d).map(x => x.heure)])].sort();
       hours.forEach(hh => {
         const x = planAt(acc, d, hh), c = x && carOf(x.carrousel);
         if (x) {
@@ -1219,10 +1220,23 @@ async function planPost(body) {
   return true;
 }
 
+// « Actualiser » : relit dossiers + planning, et relève vite sur TikTok (2 derniers posts, sans les stats
+// du compte) les comptes qui ont un post prévu maintenant ou déjà passé, pour voir s'il est sorti.
 $('planRefresh').onclick = async () => {
   const b = $('planRefresh'); b.disabled = true;
   plText = null; await loadPlanning();
-  b.disabled = false; toast('Planning à jour ✓', 2000);
+  const lim = new Date(Date.now() + 60 * 60e3);
+  const due = [...new Set((PL?.plan || []).filter(x => slotTime(x.date, x.heure) <= lim && carOf(x.carrousel)?.etat === 'pret').map(x => x.compte))];
+  if (!due.length) { b.disabled = false; toast('Planning à jour ✓', 2000); return; }
+  b.innerHTML = `<span class="spin"></span> Relevé ${esc(due.map(accShort).join(' + '))}…`;
+  const r = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: 2, compte: false, account: due.join(',') }) });
+  if (!r.ok) { const d = await r.json().catch(() => ({})); toast(d.error || 'Relevé impossible'); b.disabled = false; b.textContent = '↻ Actualiser'; return; }
+  let j;
+  do { await new Promise(res => setTimeout(res, 1500)); j = await (await fetch('/api/refresh')).json(); } while (j.running);
+  showJob(j);
+  plText = null; await Promise.all([loadPlanning(), loadGlobal()]);
+  b.disabled = false; b.textContent = '↻ Actualiser';
+  toast(j.code === 0 ? 'Planning à jour ✓' : 'Relevé en échec (voir le message en haut)', 2500);
 };
 // le planning se recharge tout seul : carrousels fabriqués par Antigravity, planning changé ailleurs
 const planVisible = () => VIEW === 'tout' && !document.hidden && $('picker').hidden;
@@ -1243,12 +1257,13 @@ $('fillBtn').onclick = async () => {
     const free = [];
     for (let i = 0; i < 7; i++) {
       const d = addD(today, i);
+      if (d < ((PL.debuts || {})[acc] || '')) continue;
       (PL.creneaux[acc] || []).forEach(hh => { if (slotTime(d, hh) > now && !planAt(acc, d, hh) && !covered(acc, d, hh)) free.push([d, hh]); });
     }
     cands.forEach((c, i) => { if (free[i]) add.push({ date: free[i][0], heure: free[i][1], compte: acc, carrousel: c.cle }); });
   });
-  if (!add.length) { toast(skipped ? `Rien à placer (${skipped} carrousel TOEIC laissé de côté sur EN/ES)` : 'Rien à placer : tout est déjà prévu'); return; }
-  if (await planPost({ action: 'remplir', plan: add })) toast(`${add.length} carrousel${add.length > 1 ? 's placés' : ' placé'}${skipped ? ` · ${skipped} TOEIC laissé${skipped > 1 ? 's' : ''} de côté sur EN/ES` : ''}`, 5000);
+  if (!add.length) { toast(skipped ? `Rien à placer (${skipped} carrousel TOEIC laissé de côté sur EN/ES/IT)` : 'Rien à placer : tout est déjà prévu'); return; }
+  if (await planPost({ action: 'remplir', plan: add })) toast(`${add.length} carrousel${add.length > 1 ? 's placés' : ' placé'}${skipped ? ` · ${skipped} TOEIC laissé${skipped > 1 ? 's' : ''} de côté sur EN/ES/IT` : ''}`, 5000);
 };
 
 // horaires des créneaux de chaque compte
@@ -1283,7 +1298,7 @@ async function loadData(run) {
   if (VIEW === 'tout') { D = res.ok ? d : null; return; }
   if (!res.ok) {
     D = null;
-    $('status').textContent = ACC !== 'fr' || AJOUT ? `Aucun relevé pour ${accName(ACC)} : connecte le compte (${AJOUT ? 'menu ⋯ > Reconnecter ce compte' : 'connecter-chrome-en.bat'}), puis clique « Mettre à jour ».` : d.error;
+    $('status').textContent = ACC !== 'fr' || AJOUT ? `Aucun relevé pour ${accName(ACC)} : connecte le compte (${AJOUT ? 'menu ⋯ > Reconnecter ce compte' : `connecter-chrome-${ACC}.bat`}), puis clique « Mettre à jour ».` : d.error;
     return;
   }
   D = d;

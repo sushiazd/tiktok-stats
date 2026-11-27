@@ -23,9 +23,9 @@ INSTALLS = HERE / "installs-posthog.json"
 PLANNING = HERE / "planning.json"
 NOMS = HERE / "noms-posts.json"
 
-DOSSIER = {"fr": "fr", "en": "en", "es": "es"}          # compte -> dossier des carrousels
-PREFIXE = {"fr": "J", "en": "EN", "es": "ES"}          # « J76 · … », « EN 14 · … », « ES 02 · … »
-CRENEAUX = {"fr": ["12:00", "19:30"], "en": ["20:30"], "es": ["21:00"]}  # modifiables dans la page
+DOSSIER = {"fr": "fr", "en": "en", "es": "es", "it": "it"}          # compte -> dossier des carrousels
+PREFIXE = {"fr": "J", "en": "EN", "es": "ES", "it": "IT"}          # « J76 · … », « EN 14 · … », « ES 02 · … »
+CRENEAUX = {"fr": ["12:00", "19:30"], "en": ["20:30"], "es": ["21:00"], "it": ["21:00"]}  # modifiables dans la page
 RECENT_J = 10  # un vieux dossier jamais relevé (anciens formats) n'est pas « prêt »
 
 _lock = threading.Lock()
@@ -149,7 +149,7 @@ def _carrousels(acc: str, postes: dict[int, dict]) -> list[dict]:
     # prompts écrits mais pas encore rendus par Antigravity
     pr = base / "prompts"
     if pr.is_dir():
-        suf = {"fr": "", "en": "-en", "es": "-es"}.get(acc, "")
+        suf = {"fr": "", "en": "-en", "es": "-es", "it": "-it"}.get(acc, "")
         for f in pr.glob("antigravity-carrousel-*.md"):
             m = re.fullmatch(rf"antigravity-carrousel-0*(\d+){suf}(-[a-z0-9-]+)?\.md", f.name)
             if not m or re.search(r"non-utilise|ancien|v\d", f.name):
@@ -170,6 +170,7 @@ def _plan() -> dict:
     p = _json(PLANNING, {})
     cr = {**CRENEAUX, **(p.get("creneaux") or {})}
     return {"creneaux": cr, "plan": [x for x in p.get("plan", []) if isinstance(x, dict)],
+            "debuts": {k: str(v) for k, v in (p.get("debuts") or {}).items()},  # compte -> 1er jour de post (pas de créneau libre avant)
             "masques": [str(x) for x in p.get("masques", []) if isinstance(x, str)]}
 
 
@@ -204,9 +205,9 @@ def _auto_noms(acc: str, posts: dict, noms: dict) -> dict:
             if k >= 25 and desc[:k] == cap[:k] and dt.datetime.fromisoformat(x["poste_le"].replace(" ", "T")) >= cree                     and x["id"] not in ajout:
                 pngs = sorted(f.glob("*.png"))
                 nom_png = pngs[0].name.lower() if pngs else ""
-                sm = re.search(r"escalier-([a-z0-9-]+?)-01-", nom_png) or re.search(r"^vocly-\d+(?:-(?:en|es))?-([a-z0-9-]+?)-01-", nom_png)
+                sm = re.search(r"escalier-([a-z0-9-]+?)-01-", nom_png) or re.search(r"^vocly-\d+(?:-(?:en|es|it))?-([a-z0-9-]+?)-01-", nom_png)
                 sujet = (sm.group(1).replace("-", " ") if sm else (meta.get("titre") or "")[:30])
-                num = str(n).zfill(2) if acc == "es" else str(n)
+                num = str(n).zfill(2) if acc in ("es", "it") else str(n)
                 ajout[x["id"]] = f"{PREFIXE[acc]}{'' if acc == 'fr' else ' '}{num} · {sujet} (auto)"
                 break
     if ajout:
@@ -244,7 +245,7 @@ def planning_get() -> dict:
     rendus = {c["cle"] for c in cars}
     change = False
     for x in p["plan"]:
-        m = re.fullmatch(r"(fr|en|es)/prompt-(\d+)", str(x.get("carrousel", "")))
+        m = re.fullmatch(r"(fr|en|es|it)/prompt-(\d+)", str(x.get("carrousel", "")))
         if m:
             cle = next((k for k in rendus if re.fullmatch(rf"{m.group(1)}/carrousel-0*{m.group(2)}", k)), None)
             if cle:
@@ -257,7 +258,7 @@ def planning_get() -> dict:
     plan = [x for x in p["plan"] if x.get("carrousel") not in faits | masques]  # un carrousel posté sort du planning
     cars = [c for c in cars if c["cle"] not in masques]
     posts = [x for x in posts if x.get("poste_le") and x["poste_le"] >= (dt.date.today() - dt.timedelta(days=7)).isoformat()]
-    return {"comptes": cs, "creneaux": p["creneaux"], "plan": plan, "carrousels": cars, "posts": posts,
+    return {"comptes": cs, "creneaux": p["creneaux"], "debuts": p["debuts"], "plan": plan, "carrousels": cars, "posts": posts,
             "masques": len(masques)}
 
 
@@ -272,11 +273,11 @@ def planning_post(body: dict) -> dict:
             p["plan"] = [x for x in p["plan"] if not (x.get("date") == date and x.get("heure") == heure and x.get("compte") == acc)
                          and not (a == "placer" and x.get("carrousel") == car)]
             if a == "placer":
-                if not re.fullmatch(r"(fr|en|es)/(carrousel|prompt)-\d+", car):
+                if not re.fullmatch(r"(fr|en|es|it)/(carrousel|prompt)-\d+", car):
                     return {"error": "Carrousel inconnu."}
                 p["plan"].append({"date": date, "heure": heure, "compte": acc, "carrousel": car})
         elif a == "masquer":  # « × » sur une carte : sort de la liste et du planning (posté ailleurs, abandonné…)
-            if not re.fullmatch(r"(fr|en|es)/(carrousel|prompt)-\d+", car):
+            if not re.fullmatch(r"(fr|en|es|it)/(carrousel|prompt)-\d+", car):
                 return {"error": "Carrousel inconnu."}
             p["masques"] = sorted(set(p["masques"]) | {car})
             p["plan"] = [x for x in p["plan"] if x.get("carrousel") != car]
@@ -290,7 +291,7 @@ def planning_post(body: dict) -> dict:
         elif a == "remplir":  # proposition : prêts -> prochains créneaux libres
             p["plan"] = [x for x in p["plan"] if x.get("date", "") >= dt.date.today().isoformat()]
             for x in body.get("plan", []):
-                if re.fullmatch(r"\d{4}-\d\d-\d\d", str(x.get("date"))) and re.fullmatch(r"(fr|en|es)/(carrousel|prompt)-\d+", str(x.get("carrousel"))):
+                if re.fullmatch(r"\d{4}-\d\d-\d\d", str(x.get("date"))) and re.fullmatch(r"(fr|en|es|it)/(carrousel|prompt)-\d+", str(x.get("carrousel"))):
                     p["plan"].append({k: str(x.get(k)) for k in ("date", "heure", "compte", "carrousel")})
         else:
             return {"error": "Action inconnue."}
@@ -300,7 +301,7 @@ def planning_post(body: dict) -> dict:
 
 
 def couverture(cle: str) -> Path | None:
-    if not re.fullmatch(r"(fr|en|es)/carrousel-\d+", cle or ""):
+    if not re.fullmatch(r"(fr|en|es|it)/carrousel-\d+", cle or ""):
         return None
     d = (RACINE / cle).resolve()
     if RACINE.resolve() not in d.parents or not d.is_dir():
