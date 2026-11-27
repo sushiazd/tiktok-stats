@@ -269,6 +269,29 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
 .picker button.it:hover{background:var(--sheet-2)}
 .picker button.it img,.picker .noimg{width:26px;height:36px;object-fit:cover;border-radius:5px;flex:none;background:var(--sheet-2)}
 .picker small{display:block;color:var(--muted);font-size:11px}
+/* aperçu d'un carrousel : un clic sur sa vignette montre toutes ses slides */
+.pv{flex:none;display:block;padding:0;border:0;background:none;border-radius:7px;cursor:zoom-in}
+.pv:hover img{outline:2px solid var(--pen);outline-offset:1px}
+.pv:focus-visible{outline:2px solid var(--pen);outline-offset:2px}
+.viewer{position:fixed;inset:0;z-index:70;display:flex;align-items:center;justify-content:center;background:rgba(12,12,11,.78);backdrop-filter:blur(3px)}
+.viewer[hidden]{display:none}
+.vw-box{display:grid;grid-template-rows:auto minmax(0,1fr) auto;gap:12px;width:min(calc(100vw - 32px),980px);height:min(calc(100vh - 32px),940px);padding:14px;background:var(--sheet);border:1px solid var(--rule-strong);border-radius:16px;box-shadow:var(--shadow)}
+.vw-top{display:flex;align-items:center;gap:12px;min-width:0}
+.vw-top b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:15px}
+.vw-count{font-size:13px;font-weight:700;color:var(--ink-2);font-variant-numeric:tabular-nums}
+.vw-x{width:32px;height:32px;flex:none;border:0;border-radius:8px;background:var(--sheet-2);color:var(--ink-2);font-size:20px;line-height:1;cursor:pointer}
+.vw-x:hover{color:var(--ink)}
+.vw-main{display:flex;align-items:center;justify-content:center;gap:12px;min-height:0}
+.vw-main img{height:100%;width:auto;max-width:calc(100% - 112px);object-fit:contain;border-radius:10px;background:var(--sheet-2)}
+.vw-nav{width:44px;height:44px;flex:none;border:1px solid var(--rule-strong);border-radius:999px;background:var(--sheet);color:var(--ink);font-size:24px;line-height:1;cursor:pointer}
+.vw-nav:hover:not(:disabled){border-color:var(--pen);color:var(--pen)}
+.vw-nav:disabled{opacity:.3;cursor:default}
+.vw-strip{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 6px}
+.vw-strip button{flex:none;padding:0;border:2px solid transparent;border-radius:7px;background:none;cursor:pointer;opacity:.55}
+.vw-strip button:hover{opacity:1}
+.vw-strip button[aria-current="true"]{border-color:var(--pen);opacity:1}
+.vw-strip img{display:block;height:76px;width:auto;border-radius:5px}
+@media (max-width:720px){.vw-main{gap:6px}.vw-main img{max-width:calc(100% - 76px)}.vw-nav{width:32px;height:32px;font-size:20px}.vw-strip img{height:60px}}
 .hours-ed{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;margin-top:16px;padding:14px;border-radius:12px;background:var(--sheet-2)}
 .hours-ed label{display:grid;gap:4px;font-size:12px;font-weight:700;color:var(--muted)}
 .hours-ed input{height:34px;width:170px;border-radius:9px;border:1px solid var(--rule-strong);background:var(--sheet);padding:0 9px;font-size:14px}
@@ -450,6 +473,17 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
   </div>
 </main>
 <div class="picker" id="picker" hidden role="dialog" aria-label="Choisir un carrousel"></div>
+<div class="viewer" id="viewer" hidden role="dialog" aria-modal="true" aria-labelledby="vwTitle">
+  <div class="vw-box">
+    <div class="vw-top"><b id="vwTitle"></b><span class="vw-count" id="vwCount"></span><button type="button" class="vw-x" id="vwClose" aria-label="Fermer l'aperçu">×</button></div>
+    <div class="vw-main">
+      <button type="button" class="vw-nav" id="vwPrev" aria-label="Slide précédente">‹</button>
+      <img id="vwImg" alt="">
+      <button type="button" class="vw-nav" id="vwNext" aria-label="Slide suivante">›</button>
+    </div>
+    <div class="vw-strip" id="vwStrip"></div>
+  </div>
+</div>
 <div class="tip" id="tip"></div>
 <div class="toast" id="toast"></div>
 
@@ -1174,7 +1208,7 @@ function renderPlanning() {
           const warn = !c || c.etat === 'a_fabriquer' || toeicWarn(c) || late;
           const why = !c ? 'carrousel introuvable' : c.etat === 'a_fabriquer' ? 'pas encore fabriqué' : toeicWarn(c) ? 'TOEIC : déconseillé sur ce compte'
             : late ? `prévu à ${hh}, pas encore vu sur TikTok. Posté ? Clique sur ↻ Actualiser. Sinon, il revient dans la liste à poster demain` : 'prêt';
-          items.push({ t: hh, html: `<div class="chip plan${warn ? ' warn' : ''}" title="${esc((c?.titre || x.carrousel) + ' · ' + why)}">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : ''}<b>${late ? '⏰ ' : ''}${esc(hh)}</b><span>${esc(carLabel(c))}${c?.etat === 'a_fabriquer' ? ' · à fabriquer' : late ? ' · en retard' : ''}</span>${d >= today ? phoneBtn(c, true) : ''}<button type="button" class="x" data-del="${esc(acc)}|${d}|${hh}" aria-label="Retirer du planning">×</button></div>` });
+          items.push({ t: hh, html: `<div class="chip plan${warn ? ' warn' : ''}" title="${esc((c?.titre || x.carrousel) + ' · ' + why)}">${thumb(c) ? pvBtn(c) : ''}<b>${late ? '⏰ ' : ''}${esc(hh)}</b><span>${esc(carLabel(c))}${c?.etat === 'a_fabriquer' ? ' · à fabriquer' : late ? ' · en retard' : ''}</span>${d >= today ? phoneBtn(c, true) : ''}<button type="button" class="x" data-del="${esc(acc)}|${d}|${hh}" aria-label="Retirer du planning">×</button></div>` });
         } else if (slotTime(d, hh) > now && !done.has(hh)) {
           items.push({ t: hh, html: `<button type="button" class="slot" data-slot="${esc(acc)}|${d}|${hh}">+ ${esc(hh)}</button>` });
         }
@@ -1198,7 +1232,7 @@ function renderPlanning() {
           '<span class="tag todo">Pas encore placé</span>') +
       (toeicWarn(c) ? '<span class="tag warn" title="Le 23/11, les posts TOEIC du compte ont été montrés à des Français">TOEIC : déconseillé ici</span>' : '') +
       phoneBtn(c, false);
-    return `<div class="scard"><button type="button" class="hide" data-hide="${esc(c.cle)}" title="Retirer de la liste (posté ailleurs, donné à un ami, abandonné…)" aria-label="Retirer ${esc(carLabel(c))} de la liste">×</button>${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : '<div class="ph">À fabriquer</div>'}<div style="min-width:0"><b><span style="color:${accCol(c.compte)}">●</span> ${esc(carLabel(c))}</b><p title="${esc(c.titre)}">${esc(c.titre)}</p>${tags}</div></div>`;
+    return `<div class="scard"><button type="button" class="hide" data-hide="${esc(c.cle)}" title="Retirer de la liste (posté ailleurs, donné à un ami, abandonné…)" aria-label="Retirer ${esc(carLabel(c))} de la liste">×</button>${thumb(c) ? pvBtn(c) : '<div class="ph">À fabriquer</div>'}<div style="min-width:0"><b><span style="color:${accCol(c.compte)}">●</span> ${esc(carLabel(c))}</b><p title="${esc(c.titre)}">${esc(c.titre)}</p>${tags}</div></div>`;
   }).join('') : '<p class="muted" style="margin:0;font-size:14px">Rien de prêt à poster : demande le prochain prompt à Claude.</p>';
   $('stock').querySelectorAll('[data-hide]').forEach(b => b.onclick = async () => {
     const c = carOf(b.dataset.hide);
@@ -1207,9 +1241,70 @@ function renderPlanning() {
   $('hiddenInfo').innerHTML = PL.masques ? `· ${PL.masques} retiré${PL.masques > 1 ? 's' : ''} <button type="button" class="unhide" id="unhide">réafficher</button>` : '';
   if (PL.masques) $('unhide').onclick = () => planPost({ action: 'demasquer' });
   document.querySelectorAll('#edt [data-send], #stock [data-send]').forEach(b => b.onclick = ev => { ev.stopPropagation(); sendPhone(b); });
+  document.querySelectorAll('#edt [data-prev], #stock [data-prev]').forEach(b => b.onclick = ev => { ev.stopPropagation(); openViewer(b.dataset.prev); });
   renderBlipAuto();
   renderHoursEd();
 }
+
+// ------------------------------------------------------------ aperçu d'un carrousel (toutes ses slides)
+// Un clic sur la vignette d'un carrousel (liste à poster ou planning) ouvre ses slides en grand :
+// flèches ‹ › ou ← →, vignettes en bas pour sauter à une slide, Échap ou clic à côté pour fermer.
+let VW = null; // { c: carrousel, i: slide affichée (1…n) }
+const slideUrl = (c, i) => `/api/slide?c=${encodeURIComponent(c.cle)}&i=${i}&v=${encodeURIComponent(c.cree || '')}`;
+const pvBtn = c => `<button type="button" class="pv" data-prev="${esc(c.cle)}" title="Voir les ${c.slides} slides" aria-label="Voir les ${c.slides} slides de ${esc(carLabel(c))}"><img src="${thumb(c)}" alt="" loading="lazy"></button>`;
+function openViewer(cle, i = 1) {
+  const c = carOf(cle);
+  if (!c || !c.slides) return;
+  VW = { c, i: 1, back: document.activeElement };
+  $('picker').hidden = true;
+  $('vwTitle').textContent = `${carLabel(c)} · ${c.titre}`;
+  $('vwStrip').innerHTML = [...Array(c.slides).keys()].map(k => `<button type="button" data-i="${k + 1}" aria-label="Slide ${k + 1}"><img src="${slideUrl(c, k + 1)}" alt="" loading="lazy"></button>`).join('');
+  $('vwStrip').querySelectorAll('[data-i]').forEach(b => b.onclick = () => showSlide(+b.dataset.i));
+  $('viewer').hidden = false;
+  document.body.style.overflow = 'hidden';
+  showSlide(i);
+  $('vwClose').focus();
+}
+function showSlide(i) {
+  const n = VW.c.slides;
+  VW.i = Math.max(1, Math.min(n, i));
+  $('vwImg').src = slideUrl(VW.c, VW.i);
+  $('vwImg').alt = `${carLabel(VW.c)}, slide ${VW.i} sur ${n}`;
+  $('vwCount').textContent = `${VW.i} / ${n}`;
+  $('vwPrev').disabled = VW.i === 1;
+  $('vwNext').disabled = VW.i === n;
+  $('vwStrip').querySelectorAll('[data-i]').forEach(b => {
+    const on = +b.dataset.i === VW.i;
+    b.setAttribute('aria-current', on ? 'true' : 'false');
+    if (on) b.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  });
+  if (VW.i < n) new Image().src = slideUrl(VW.c, VW.i + 1); // la suivante arrive sans attente
+}
+function closeViewer() {
+  if (!VW) return;
+  const back = VW.back;
+  VW = null;
+  $('viewer').hidden = true;
+  $('vwImg').removeAttribute('src');
+  document.body.style.overflow = '';
+  back?.focus?.();
+}
+$('vwClose').onclick = closeViewer;
+$('vwPrev').onclick = () => showSlide(VW.i - 1);
+$('vwNext').onclick = () => showSlide(VW.i + 1);
+$('viewer').onclick = e => { if (e.target === $('viewer')) closeViewer(); };
+// clavier : capté avant les autres raccourcis (↑ ↓ changent de post derrière, Échap ferme le choix de créneau)
+addEventListener('keydown', e => {
+  if (!VW) return;
+  if (e.key === 'Escape') closeViewer();
+  else if (e.key === 'ArrowRight') showSlide(VW.i + 1);
+  else if (e.key === 'ArrowLeft') showSlide(VW.i - 1);
+  else if (e.key === 'Home') showSlide(1);
+  else if (e.key === 'End') showSlide(VW.c.slides);
+  else if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+}, true);
 
 function openPicker(btn, acc, d, hh) {
   const pk = $('picker');
@@ -1257,7 +1352,7 @@ $('planRefresh').onclick = async () => {
   toast(j.code === 0 ? 'Planning à jour ✓' : 'Relevé en échec (voir le message en haut)', 2500);
 };
 // le planning se recharge tout seul : carrousels fabriqués par Antigravity, planning changé ailleurs
-const planVisible = () => VIEW === 'tout' && !document.hidden && $('picker').hidden;
+const planVisible = () => VIEW === 'tout' && !document.hidden && $('picker').hidden && !VW;
 setInterval(() => { if (planVisible()) loadPlanning(); }, 30 * 1000);
 addEventListener('focus', () => { if (planVisible()) loadPlanning(); });
 document.addEventListener('visibilitychange', () => { if (planVisible()) loadPlanning(); });

@@ -151,8 +151,14 @@ class Handler(BaseHTTPRequestHandler):
                 e = blip.etat()
                 d["blip"] = {"auto": e["auto"], "envois": e["envois"], "appareils": {c["id"]: (blip.appareil(c["id"]) or {}).get("nom") for c in comptes.liste()}}
             return self.json(d)
-        if path == "/api/couverture":
-            f = tableau.couverture(params.get("c", ""))
+        if path in ("/api/couverture", "/api/slide"):
+            if path == "/api/slide":  # une slide du carrousel, numérotée à partir de 1 (aperçu du planning)
+                fs = tableau.slides(params.get("c", ""))
+                n = params.get("i", "")
+                i = int(n) if n.isdigit() and len(n) <= 3 else 0
+                f = fs[i - 1] if 1 <= i <= len(fs) else None
+            else:
+                f = tableau.couverture(params.get("c", ""))
             if not f:
                 return self.send(404, b"Introuvable", "text/plain; charset=utf-8")
             body = f.read_bytes()

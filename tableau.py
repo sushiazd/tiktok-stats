@@ -338,12 +338,17 @@ def planning_post(body: dict) -> dict:
     return {"ok": True}
 
 
-def couverture(cle: str) -> Path | None:
+def slides(cle: str) -> list[Path]:
+    """Les slides d'un carrousel, dans l'ordre (noms en …-01-…, …-02-…, comme les compte le planning)."""
     if not re.fullmatch(r"(fr|en|es|it)/carrousel-\d+", cle or ""):
-        return None
+        return []
     d = (RACINE / cle).resolve()
     if RACINE.resolve() not in d.parents or not d.is_dir():
-        return None
-    pngs = sorted(d.glob("*.png"))
+        return []
+    return sorted(d.glob("*.png"))
+
+
+def couverture(cle: str) -> Path | None:
+    pngs = slides(cle)
     cov = [p for p in pngs if "couverture" in p.name] or pngs
     return cov[0] if cov else None
