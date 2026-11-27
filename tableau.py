@@ -3,7 +3,8 @@
 - Vues par jour : série « vues » du compte dans chaque relevé (TikTok la donne avec un jour de retard :
   j-k = date du relevé - k - 1, vérifié sur les relevés du 17 au 23 novembre). Les jours que TikTok
   n'a pas encore donnés sont estimés avec les vues heure par heure des posts récents (marqués « estimé »).
-- Installs : installs-posthog.json, rempli depuis PostHog (pas de clé PostHog dans l'outil).
+- Installs : installs-posthog.json. Avec une clé PostHog (posthog-cle.txt), installs_auto.py le relit tout seul
+  toutes les 10 min ; sans clé, Claude le remplit à la main.
 - Planning : planning.json (créneaux de chaque compte + carrousels placés). Les carrousels viennent des
   dossiers fr/, en/, es/ de TiktokVocly ; un carrousel est « posté » quand noms-posts.json a son numéro.
 """
@@ -17,6 +18,11 @@ import threading
 from pathlib import Path
 
 import comptes
+
+try:  # absent de la version partagée : pas d'installs PostHog chez les amis
+    import installs_auto
+except ImportError:
+    installs_auto = None
 
 HERE = Path(__file__).resolve().parent
 RACINE = HERE.parent  # TiktokVocly (absent dans la version partagée : pas de carrousels, rien ne casse)
@@ -109,7 +115,11 @@ def global_data() -> dict:
             posts.append({**p, "compte": c["id"], "nom": noms.get(p["id"])})
     jours = [{"jour": j, **v} for j, v in sorted(par_jour.items())]
     posts.sort(key=lambda p: p.get("poste_le") or "")
-    return {"comptes": cs, "jours": jours, "installs": _json(INSTALLS, None), "posts": posts}
+    auto = None
+    if installs_auto and not comptes.modifiable():  # modifiable = version partagée
+        installs_auto.en_fond(attente=4)  # PostHog répond en ~1 s ; au-delà, le rechargement auto prendra le relais
+        auto = installs_auto.etat()
+    return {"comptes": cs, "jours": jours, "installs": _json(INSTALLS, None), "posts": posts, "installs_auto": auto}
 
 
 # ------------------------------------------------------------ planning

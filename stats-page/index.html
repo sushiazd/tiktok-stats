@@ -256,6 +256,14 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
 .scard .hide{position:absolute;top:4px;right:4px;width:22px;height:22px;border:0;border-radius:6px;background:none;color:var(--muted);cursor:pointer;font-size:15px;line-height:1}
 .scard .hide:hover{color:var(--bad);background:var(--sheet-2)}
 .unhide{border:0;background:none;color:var(--pen);cursor:pointer;font-size:13px;padding:0;text-decoration:underline}
+.foot .unhide{font-size:12px}
+.foot .warn{color:var(--bad);font-weight:600}
+.ph-form{margin-top:10px;padding:12px;border:1px solid var(--rule);border-radius:12px;display:grid;gap:10px}
+.ph-form[hidden]{display:none}
+.ph-form ol{margin:0;padding-left:20px;font-size:13px;line-height:1.55;color:var(--muted)}
+.ph-form ol b{color:var(--ink)}
+.ph-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.ph-row .sel{flex:1 1 220px;min-width:0;font-family:ui-monospace,Consolas,monospace;font-weight:500}
 .scard img,.scard .ph{width:54px;height:72px;object-fit:cover;border-radius:7px;flex:none;background:var(--sheet-2)}
 .scard .ph{display:grid;place-items:center;font-size:11px;color:var(--muted);text-align:center;padding:4px}
 .scard b{display:block;font-size:13px;line-height:1.3}
@@ -450,6 +458,16 @@ details.fold>summary small{font:14px var(--sans);color:var(--muted);margin-left:
       <div class="chart" id="gChart"></div>
       <div class="legend" id="gLegend"></div>
       <p class="foot" id="gFoot"></p>
+      <form class="ph-form" id="phForm" hidden autocomplete="off">
+        <ol>
+          <li>Ouvre <a href="https://eu.posthog.com/settings/user-api-keys" target="_blank" rel="noopener">eu.posthog.com › Paramètres › Personal API keys</a> et clique <b>Create personal API key</b>.</li>
+          <li>Nom : <b>Stats TikTok</b>. Accès : l'organisation ou le projet <b>Vocly</b>.</li>
+          <li>Droits : <b>Endpoint → Read</b> seulement (rien d'autre), puis crée la clé.</li>
+          <li>Copie la clé (elle commence par <b>phx_</b>) et colle-la ici. Elle reste sur ce PC, jamais sur GitHub.</li>
+        </ol>
+        <div class="ph-row"><input class="sel" id="phKey" type="password" placeholder="phx_…" spellcheck="false"><button type="submit" class="btn btn-primary" id="phSave">Enregistrer</button><button type="button" class="btn" id="phCancel">Annuler</button></div>
+        <div class="ph-row" id="phRemoveRow" hidden><button type="button" class="unhide" id="phRemove">Retirer la clé (les installs ne se mettront plus à jour tout seuls)</button></div>
+      </form>
     </section>
 
     <section class="card" id="planCard">
@@ -1056,7 +1074,16 @@ function renderGlobal() {
   $('gLegend').innerHTML = ids.map(id => `<span><i class="sq" style="background:${accCol(id)}"></i>${esc(accName(id))}</span>`).join('') +
     (G.installs ? `<span><i class="ln"></i>Installs (PostHog)</span>` : '') + (gMode === 'cumul' ? '<span>Cumul depuis le début de la période (axe des installs à droite)</span>' : `<span>Barre pâle = chiffre estimé (TikTok ne l'a pas encore donné)</span>`);
   const m = G.installs?.maj?.match(/(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/);
-  $('gFoot').textContent = G.installs ? `Installs : PostHog, chiffres du ${m ? `${m[3]}/${m[2]} à ${m[4]}h${m[5]}` : '?'}. Pour les rafraîchir, demande à Claude de remettre à jour installs-posthog.json.` : '';
+  // Installs : relus tout seuls si une clé PostHog est enregistrée (installs_auto.py), sinon remplis par Claude.
+  const A = G.installs_auto, quand = m ? `${m[3]}/${m[2]} à ${m[4]}h${m[5]}` : '?';
+  const dm = G.installs?.derniere?.match(/(\d{4})-(\d\d)-(\d\d)T(\d\d):(\d\d)/);
+  const der = dm ? ` · dernière install ${dm[0].slice(0, 10) === new Date().toLocaleDateString('sv') ? "aujourd'hui" : `le ${dm[3]}/${dm[2]}`} à ${dm[4]}h${dm[5]}` : '';
+  const btn = t => `<button type="button" class="unhide" id="phOpen">${t}</button>`;
+  $('gFoot').innerHTML = !G.installs && !A ? ''
+    : A?.cle && !A.erreur ? `Installs : PostHog, mis à jour tout seuls (PostHog recalcule toutes les 15 min) · chiffres du ${quand}${der}. ${btn('Clé PostHog')}`
+    : A?.cle ? `Installs : PostHog, chiffres du ${quand}${der}. <span class="warn">La mise à jour automatique ne marche pas : ${esc(A.erreur)}.</span> ${btn('Changer la clé')}`
+    : `Installs : PostHog, chiffres du ${quand}${der}. ${A ? `Pour qu'ils se mettent à jour tout seuls : ${btn('ajoute une clé PostHog')}` : 'Pour les rafraîchir, demande à Claude de remettre à jour installs-posthog.json.'}`;
+  if ($('phOpen')) $('phOpen').onclick = () => { $('phForm').hidden = false; $('phRemoveRow').hidden = !A?.cle; $('phKey').value = ''; $('phKey').focus(); };
   $('gNums').querySelectorAll('.num').forEach((n, i) => { n.hidden = !G.installs && i > 0; });
 }
 
@@ -1363,6 +1390,32 @@ const autoReload = () => { if (planVisible()) { loadPlanning(); loadGlobal(true)
 setInterval(autoReload, 30 * 1000);
 addEventListener('focus', autoReload);
 document.addEventListener('visibilitychange', autoReload);
+
+// Clé PostHog (lecture seule) : testée par le serveur, gardée seulement si PostHog l'accepte. Jamais renvoyée à la page.
+async function phPost(cle) {
+  const r = await fetch('/api/posthog-cle', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ cle }) });
+  return r.json().catch(() => ({ error: 'Réponse illisible du serveur' }));
+}
+$('phForm').onsubmit = async e => {
+  e.preventDefault();
+  const cle = $('phKey').value.trim();
+  if (!cle) { $('phKey').focus(); return; }
+  $('phSave').disabled = true; $('phSave').innerHTML = '<span class="spin"></span> Test…';
+  const d = await phPost(cle);
+  $('phSave').disabled = false; $('phSave').textContent = 'Enregistrer';
+  if (d.error) { toast(d.error, 6000); $('phKey').select(); return; }
+  $('phKey').value = ''; $('phForm').hidden = true;
+  toast(d.erreur ? `Clé gardée, mais ${d.erreur}` : 'Clé PostHog enregistrée ✓ Les installs se mettent à jour tout seuls.', 5000);
+  await loadGlobal();
+};
+$('phCancel').onclick = () => { $('phKey').value = ''; $('phForm').hidden = true; };
+$('phRemove').onclick = async () => {
+  if ($('phRemove').dataset.sure !== '1') { $('phRemove').dataset.sure = '1'; $('phRemove').textContent = 'Sûr ? Clique encore pour retirer la clé'; return; }
+  delete $('phRemove').dataset.sure; $('phRemove').textContent = 'Retirer la clé (les installs ne se mettront plus à jour tout seuls)';
+  const d = await phPost('');
+  if (d.error) { toast(d.error); return; }
+  $('phForm').hidden = true; toast('Clé PostHog retirée'); await loadGlobal();
+};
 
 // « Proposer un planning » : les carrousels prêts vont dans les prochains créneaux libres de leur compte
 $('fillBtn').onclick = async () => {

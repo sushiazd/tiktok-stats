@@ -228,7 +228,7 @@ class Handler(BaseHTTPRequestHandler):
         self.send(200, f.read_bytes(), ctype + "; charset=utf-8")
 
     def do_POST(self):
-        if self.path not in ("/api/refresh", "/api/comptes", "/api/planning", "/api/blip") or not self.same_origin():
+        if self.path not in ("/api/refresh", "/api/comptes", "/api/planning", "/api/blip", "/api/posthog-cle") or not self.same_origin():
             return self.json({"error": "refusé"}, 403)
         try:
             body = json.loads(self.rfile.read(int(self.headers.get("Content-Length") or 0)) or b"{}")
@@ -241,6 +241,11 @@ class Handler(BaseHTTPRequestHandler):
                 blip.regler_auto(bool(body.get("on")))
                 return self.json({"ok": True})
             r = blip.envoyer(str(body.get("cle", "")))
+            return self.json(r, 400 if r.get("error") else 200)
+        if self.path == "/api/posthog-cle":  # clé PostHog lecture seule collée dans la page (jamais renvoyée)
+            if tableau.installs_auto is None or comptes.modifiable():
+                return self.json({"error": "Pas disponible dans cette version."}, 400)
+            r = tableau.installs_auto.enregistrer_cle(str(body.get("cle", "")))
             return self.json(r, 400 if r.get("error") else 200)
         if self.path == "/api/planning":
             r = tableau.planning_post(body if isinstance(body, dict) else {})
