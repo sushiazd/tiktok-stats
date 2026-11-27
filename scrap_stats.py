@@ -235,8 +235,23 @@ class Studio:
         self.captured.append({"url": u, "json": js})
 
     def goto(self, url: str, settle: float = 6.0, ready=None):
-        """Ouvre la page et attend que ready() soit vrai, ou `settle` secondes au maximum."""
-        self.page.goto(url, wait_until="domcontentloaded", timeout=45000)
+        """Ouvre la page et attend que ready() soit vrai, ou `settle` secondes au maximum.
+        Une coupure réseau passagère (DNS, Wi-Fi, VPN qui se reconnecte) est réessayée 3 fois avant d'abandonner
+        (27/11 15h30 : ES a échoué sur ERR_NAME_NOT_RESOLVED entre deux comptes qui marchaient)."""
+        for essai, pause in enumerate((5, 10, 20, None), 1):
+            try:
+                self.page.goto(url, wait_until="domcontentloaded", timeout=45000)
+                break
+            except PWError as e:
+                m = re.search(r"net::ERR_[A-Z_]+|Timeout \d+ms exceeded", str(e))
+                if not m:
+                    raise
+                if pause is None:
+                    self.ctx.close()
+                    sys.exit(f"PAS DE RÉSEAU : TikTok injoignable ({m.group(0)}) après {essai} essais. "
+                             "Vérifie la connexion (ou le VPN), puis relance.")
+                log(f"Réseau : {m.group(0)}, nouvel essai dans {pause} s ({essai}/3)")
+                time.sleep(pause)
         t0 = time.time()
         while time.time() - t0 < settle:
             try:

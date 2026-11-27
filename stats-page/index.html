@@ -985,8 +985,13 @@ async function openDash() {
   if (!PL) $('edt').innerHTML = '<p class="empty">Chargement…</p>';
   await Promise.all([loadGlobal(), loadPlanning()]);
 }
-async function loadGlobal() {
-  try { const r = await fetch('/api/global'); G = r.ok ? await r.json() : null; } catch (e) { G = null; }
+let gText = null;
+async function loadGlobal(auto) {
+  let txt = null;
+  try { const r = await fetch('/api/global'); txt = r.ok ? await r.text() : null; } catch (e) {}
+  if (auto && (!txt || txt === gText)) return;  // rechargement auto : rien de neuf, on ne redessine pas
+  gText = txt;
+  try { G = txt ? JSON.parse(txt) : null; } catch (e) { G = null; }
   renderGlobal();
 }
 let plText = null;
@@ -1353,9 +1358,11 @@ $('planRefresh').onclick = async () => {
 };
 // le planning se recharge tout seul : carrousels fabriqués par Antigravity, planning changé ailleurs
 const planVisible = () => VIEW === 'tout' && !document.hidden && $('picker').hidden && !VW;
-setInterval(() => { if (planVisible()) loadPlanning(); }, 30 * 1000);
-addEventListener('focus', () => { if (planVisible()) loadPlanning(); });
-document.addEventListener('visibilitychange', () => { if (planVisible()) loadPlanning(); });
+// … et le graphique aussi : installs-posthog.json remis à jour par Claude (avant, la page gardait les chiffres de son ouverture)
+const autoReload = () => { if (planVisible()) { loadPlanning(); loadGlobal(true); } };
+setInterval(autoReload, 30 * 1000);
+addEventListener('focus', autoReload);
+document.addEventListener('visibilitychange', autoReload);
 
 // « Proposer un planning » : les carrousels prêts vont dans les prochains créneaux libres de leur compte
 $('fillBtn').onclick = async () => {
@@ -1438,14 +1445,41 @@ $('fullBtn').onclick = () => { $('menu').open = false; fullscreen(); };
 
 // ------------------------------------------------------------ bouton « Mettre à jour »
 let poll = null;
+// Relevé de plusieurs comptes (« tous », « en,es ») : lignes « --- compte X --- » puis la sortie de ce compte.
+function jobSegments(j) {
+  const segs = {}; let cur = null;
+  for (const l of j.lines || []) { const m = l.match(/^--- compte (\S+) ---$/); if (m) segs[cur = m[1]] = []; else if (cur) segs[cur].push(l); }
+  return segs;
+}
+// Comptes ratés : donnés par le serveur (echecs), sinon ceux dont la sortie n'a pas de « Terminé en ».
+function jobRates(j) {
+  if (j.echecs?.length) return j.echecs;
+  const segs = jobSegments(j);
+  return Object.keys(segs).filter(a => !segs[a].some(l => l.startsWith('Terminé en')));
+}
 function showJob(j) {
   const box = $('job');
   const secs = Math.round(((j.ended || Date.now() / 1000) - j.started));
-  const log = esc((j.lines || []).slice(-6).join('\n'));
   box.hidden = false;
-  if (j.running) box.innerHTML = `<div class="note">Relevé en cours… ${secs} s</div>`;
-  else if (j.code === 0) box.hidden = true;
-  else box.innerHTML = `<div class="note bad" style="margin-bottom:14px">Le relevé n'a pas marché. ${AJOUT ? 'Si le compte n’est pas connecté ou si TikTok demande une vérification : menu ⋯ > Reconnecter ce compte.' : 'Si TikTok demande une vérification, lance <code>python scrap_stats.py --headed</code> dans tiktok-auto.'}<pre>${log}</pre></div>`;
+  if (j.running) { box.innerHTML = `<div class="note">Relevé en cours… ${secs} s</div>`; return; }
+  if (j.code === 0) { box.hidden = true; return; }
+  // Avant : on montrait les 6 dernières lignes, donc celles du DERNIER compte (IT, qui avait marché) au lieu de l'erreur d'ES.
+  const segs = jobSegments(j), multi = Object.keys(segs).length > 1, rates = multi ? jobRates(j) : [];
+  const bouts = multi && rates.length ? rates.map(a => [a, (segs[a] || []).filter(l => l.trim())]) : [[null, j.lines || []]];
+  const txt = bouts.map(b => b[1].join('\n')).join('\n');
+  const bat = a => `connecter-chrome${a && a !== 'fr' ? '-' + a : ''}.bat`;
+  const conseil = /PAS DE RÉSEAU|net::ERR_|Timeout \d+ms exceeded/.test(txt)
+      ? 'TikTok était injoignable (coupure réseau ou VPN qui se reconnecte). C’est passager : reclique « Mettre à jour » dans une minute.'
+    : /Pas connecté/.test(txt)
+      ? (AJOUT ? 'Le compte n’est plus connecté : menu ⋯ > Reconnecter ce compte.' : `Le compte n’est plus connecté : lance <code>${bat(rates[0] || (multi ? '' : j.account))}</code> dans tiktok-auto, connecte-toi, puis ferme la fenêtre.`)
+    : /BLOQUÉ/.test(txt)
+      ? (AJOUT ? 'TikTok demande une vérification : menu ⋯ > Reconnecter ce compte.' : 'TikTok demande une vérification : lance <code>python scrap_stats.py --headed</code> dans tiktok-auto et fais-la à la main.')
+    : (AJOUT ? 'Si le compte n’est pas connecté ou si TikTok demande une vérification : menu ⋯ > Reconnecter ce compte.' : 'Si TikTok demande une vérification, lance <code>python scrap_stats.py --headed</code> dans tiktok-auto.');
+  const qui = multi && rates.length
+    ? ` pour <b>${rates.map(a => esc(accName(a))).join('</b> et <b>')}</b>${rates.length < Object.keys(segs).length ? ' (les autres comptes sont à jour)' : ''}`
+    : '';
+  const log = bouts.map(([a, ls]) => (a && bouts.length > 1 ? `— ${accName(a)} —\n` : '') + esc(ls.slice(-6).join('\n'))).join('\n');
+  box.innerHTML = `<div class="note bad" style="margin-bottom:14px">Le relevé n'a pas marché${qui}. ${conseil}<pre>${log}</pre></div>`;
 }
 const idleBtn = () => { $('refreshBtn').disabled = false; $('refreshBtn').innerHTML = '↻ <span class="upd-label">Mettre à jour</span>'; };
 async function watch() {
@@ -1457,7 +1491,7 @@ async function watch() {
   if (poll !== 'idle' && (j.code === 0 || j.account === 'tous')) {
     await loadRuns(); await loadData($('runSel').value);
     if (VIEW === 'tout') await Promise.all([loadGlobal(), loadPlanning()]);
-    toast(j.code === 0 ? 'Stats à jour ✓' : 'Stats à jour, sauf un compte (voir le message)');
+    toast(j.code === 0 ? 'Stats à jour ✓' : `Stats à jour, sauf ${jobRates(j).map(accName).join(' et ') || 'un compte'} (voir le message)`);
   }
   poll = 'idle';
 }

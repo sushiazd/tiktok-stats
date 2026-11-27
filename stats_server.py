@@ -77,7 +77,7 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
     with lock:
         if job["running"]:
             return False
-        job.update(running=True, lines=[], code=None, started=time.time(), ended=None, args=args, account=acc)
+        job.update(running=True, lines=[], code=None, started=time.time(), ended=None, args=args, account=acc, echecs=[])
 
     def work():
         # Dans la fenêtre (pythonw.exe), le relevé passe par python.exe pour que sa sortie soit lue.
@@ -108,6 +108,9 @@ def start_refresh(args: list[str], acc: str = "fr") -> bool:
                     job["lines"].append(f"--- compte {a} ---")
             c = un(a)
             code = code or c  # un compte qui échoue n'empêche pas les suivants
+            if c:
+                with lock:
+                    job["echecs"].append(a)  # la page dit QUEL compte a raté (pas juste les 6 dernières lignes)
         with lock:
             job.update(running=False, code=code, ended=time.time())
 
@@ -215,7 +218,7 @@ class Handler(BaseHTTPRequestHandler):
             return self.json({"comptes": out})
         if path == "/api/refresh":
             with lock:
-                return self.json({k: job.get(k) for k in ("running", "lines", "code", "started", "ended", "account")})
+                return self.json({k: job.get(k) for k in ("running", "lines", "code", "started", "ended", "account", "echecs")})
         rel = "index.html" if path in ("/", "") else path.lstrip("/")
         f = (PAGE / rel).resolve()
         if PAGE not in f.parents and f != PAGE / "index.html" or not f.is_file():
