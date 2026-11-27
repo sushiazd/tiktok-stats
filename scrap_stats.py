@@ -412,6 +412,9 @@ def summarize(item_id: str, d: dict, now: datetime) -> dict:
         "top_pays": ", ".join(f"{k} {pct(v)}" for k, v in sorted(countries.items(), key=lambda x: -(x[1] or 0))[:4]),
         "slides_retention_%": " / ".join(str(pct(x)) for x in ret) if ret else "",
         "abonnes_compte": val(d.get("follower_num")),
+        # légende entière (la colonne description est coupée à 90 caractères) : les légendes des carrousels
+        # d'un même format commencent pareil, le nommage auto du planning a besoin de la suite pour les distinguer
+        "legende": (vi.get("desc") or "").replace("\n", " ")[:400],
     }
 
 

@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import os
 import re
 import threading
 from pathlib import Path
@@ -68,7 +69,8 @@ def _lire_compte(acc: str) -> dict:
                 jours[(at - dt.timedelta(days=int(m.group(1)) + 1)).isoformat()] = int(x["valeur"])
         for s in d.get("summary", []):
             posts[s["id"]] = {"id": s["id"], "poste_le": s.get("poste_le"), "vues": s.get("vues"),
-                              "completion": s.get("completion_%"), "description": (s.get("description") or "")[:300]}
+                              "completion": s.get("completion_%"),
+                              "description": (s.get("legende") or s.get("description") or "")[:300]}
         for h in d.get("hours", []):
             if h.get("heure") and h.get("vues") is not None:
                 heures[(h["id"], h["heure"])] = h["vues"]
@@ -171,7 +173,9 @@ def _plan() -> dict:
     cr = {**CRENEAUX, **(p.get("creneaux") or {})}
     return {"creneaux": cr, "plan": [x for x in p.get("plan", []) if isinstance(x, dict)],
             "debuts": {k: str(v) for k, v in (p.get("debuts") or {}).items()},  # compte -> 1er jour de post (pas de créneau libre avant)
-            "masques": [str(x) for x in p.get("masques", []) if isinstance(x, str)]}
+            "masques": [str(x) for x in p.get("masques", []) if isinstance(x, str)],
+            # carrousel -> « AAAA-MM-JJ HH:MM » du créneau passé sans post (il est revenu dans la liste à poster)
+            "rates": {str(k): str(v) for k, v in (p.get("rates") or {}).items()}}
 
 
 def _norm(t: str) -> str:
@@ -189,27 +193,41 @@ def _auto_noms(acc: str, posts: dict, noms: dict) -> dict:
     pris = {_num(n, acc) for n in noms.values()}
     ajout = {}
     maintenant = dt.datetime.now().timestamp()
+    cands = []  # carrousels récents pas encore nommés : (numéro, dossier, POST.json, légende normalisée, fabriqué le)
     for f in base.iterdir():
         m = re.fullmatch(r"carrousel-0*(\d+)", f.name)
         info = f / "POST.json"
         if not m or int(m.group(1)) in pris or not info.exists() or maintenant - info.stat().st_mtime > RECENT_J * 86400:
             continue
-        n, meta = int(m.group(1)), _json(info, {})
+        meta = _json(info, {})
         cap = _norm(meta.get("caption") or "")
-        if len(cap) < 25:
+        if len(cap) >= 25:
+            cands.append((int(m.group(1)), f, meta, cap, dt.datetime.fromtimestamp(info.stat().st_mtime) - dt.timedelta(hours=1)))
+    cands.sort(key=lambda c: c[0])
+    pris_ici: set[int] = set()
+    # Chaque post sans nom va au carrousel dont la légende colle le plus longtemps au début de la sienne (les
+    # carrousels d'un même format commencent pareil, c'est la suite qui les distingue). Il faut au moins
+    # 25 caractères en commun et 60 % de la plus courte des deux (120 max), pour tolérer une légende retouchée.
+    for x in sorted(libres, key=lambda x: x["poste_le"]):
+        desc = _norm(x["description"])
+        t = dt.datetime.fromisoformat(x["poste_le"].replace(" ", "T"))
+        best = None
+        for n, f, meta, cap, cree in cands:
+            if n in pris_ici or t < cree:
+                continue
+            k = len(os.path.commonprefix([desc, cap]))
+            if k >= max(25, 0.6 * min(len(desc), len(cap), 120)) and (best is None or k > best[0]):
+                best = (k, n, f, meta)
+        if not best:
             continue
-        cree = dt.datetime.fromtimestamp(info.stat().st_mtime) - dt.timedelta(hours=1)
-        for x in libres:
-            desc = _norm(x["description"])
-            k = min(len(desc), len(cap), 120)
-            if k >= 25 and desc[:k] == cap[:k] and dt.datetime.fromisoformat(x["poste_le"].replace(" ", "T")) >= cree                     and x["id"] not in ajout:
-                pngs = sorted(f.glob("*.png"))
-                nom_png = pngs[0].name.lower() if pngs else ""
-                sm = re.search(r"escalier-([a-z0-9-]+?)-01-", nom_png) or re.search(r"^vocly-\d+(?:-(?:en|es|it))?-([a-z0-9-]+?)-01-", nom_png)
-                sujet = (sm.group(1).replace("-", " ") if sm else (meta.get("titre") or "")[:30])
-                num = str(n).zfill(2) if acc in ("es", "it") else str(n)
-                ajout[x["id"]] = f"{PREFIXE[acc]}{'' if acc == 'fr' else ' '}{num} · {sujet} (auto)"
-                break
+        _, n, f, meta = best
+        pris_ici.add(n)
+        pngs = sorted(f.glob("*.png"))
+        nom_png = pngs[0].name.lower() if pngs else ""
+        sm = re.search(r"escalier-([a-z0-9-]+?)-01-", nom_png) or re.search(r"^vocly-\d+(?:-(?:en|es|it))?-([a-z0-9-]+?)-01-", nom_png)
+        sujet = (sm.group(1).replace("-", " ") if sm else (meta.get("titre") or "")[:30])
+        num = str(n).zfill(2) if acc in ("es", "it") else str(n)
+        ajout[x["id"]] = f"{PREFIXE[acc]}{'' if acc == 'fr' else ' '}{num} · {sujet} (auto)"
     if ajout:
         with _lock:
             tout = {**_json(NOMS, {}), **ajout}
@@ -250,16 +268,36 @@ def planning_get() -> dict:
             cle = next((k for k in rendus if re.fullmatch(rf"{m.group(1)}/carrousel-0*{m.group(2)}", k)), None)
             if cle:
                 x["carrousel"], change = cle, True
+    faits = {c["cle"] for c in cars if c["etat"] == "poste"}
+    masques = set(p["masques"])
+    a_poster = {c["cle"] for c in cars if c["etat"] != "poste" and c["cle"] not in masques}
+    # Un créneau d'un jour passé dont le carrousel n'est pas sorti : on ne peut plus poster « hier », donc le
+    # carrousel quitte ce jour et revient dans la liste à poster, avec la trace du créneau raté.
+    # Aujourd'hui, un créneau passé reste affiché « en retard » : il peut encore sortir dans la journée.
+    # Les lignes passées d'un carrousel posté (ou trop vieux pour être listé) sont simplement nettoyées.
+    auj = dt.date.today().isoformat()
+    garde = []
+    for x in p["plan"]:
+        car = str(x.get("carrousel", ""))
+        if x.get("date", "") < auj:
+            if car in a_poster:
+                p["rates"][car] = f'{x.get("date")} {x.get("heure")}'
+            change = True
+            continue
+        garde.append(x)
+    p["plan"] = garde
+    places = {str(x.get("carrousel", "")) for x in garde}
+    for car in [k for k in p["rates"] if k not in a_poster or k in places]:
+        del p["rates"][car]
+        change = True
     if change:
         with _lock:
             _ecrire(p)
-    faits = {c["cle"] for c in cars if c["etat"] == "poste"}
-    masques = set(p["masques"])
-    plan = [x for x in p["plan"] if x.get("carrousel") not in faits | masques]  # un carrousel posté sort du planning
+    plan = [x for x in garde if x.get("carrousel") not in faits | masques]  # un carrousel posté sort du planning
     cars = [c for c in cars if c["cle"] not in masques]
     posts = [x for x in posts if x.get("poste_le") and x["poste_le"] >= (dt.date.today() - dt.timedelta(days=7)).isoformat()]
     return {"comptes": cs, "creneaux": p["creneaux"], "debuts": p["debuts"], "plan": plan, "carrousels": cars, "posts": posts,
-            "masques": len(masques)}
+            "masques": len(masques), "rates": p["rates"]}
 
 
 def planning_post(body: dict) -> dict:

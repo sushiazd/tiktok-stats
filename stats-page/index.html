@@ -1101,8 +1101,20 @@ const carLabel = c => c ? (c.compte === 'fr' ? `J${c.num}` : `${PREFIX[c.compte]
 const PREFIX = { fr: 'J', en: 'EN', es: 'ES', it: 'IT' };
 const slotTime = (d, h) => new Date(d + 'T' + h);
 function postsOf(acc, d) { return (PL?.posts || []).filter(p => p.compte === acc && (p.poste_le || '').slice(0, 10) === d).sort((a, b) => a.poste_le.localeCompare(b.poste_le)); }
-// un créneau est « fait » si un vrai post du compte est sorti à moins de 3 h de lui ce jour-là
-const covered = (acc, d, h) => postsOf(acc, d).some(p => Math.abs(new Date(p.poste_le.replace(' ', 'T')) - slotTime(d, h)) < 3 * 3600e3);
+// heures des créneaux d'un compte ce jour-là : ses horaires habituels + les heures où un carrousel est placé
+const slotHours = (acc, d) => [...new Set([...(d < ((PL.debuts || {})[acc] || '') ? [] : PL.creneaux[acc] || []), ...(PL.plan || []).filter(x => x.compte === acc && x.date === d).map(x => x.heure)])].sort();
+// Un vrai post « occupe » un seul créneau : le plus tôt pas encore occupé, s'il est sorti au plus 3 h avant lui.
+// Un post de midi sorti en retard à 17 h occupe donc midi et laisse libre le créneau du soir.
+function coveredSet(acc, d) {
+  const used = new Set(), hs = slotHours(acc, d);
+  postsOf(acc, d).forEach(p => {
+    const t = new Date(p.poste_le.replace(' ', 'T'));
+    const h = hs.find(h => !used.has(h) && t >= slotTime(d, h) - 3 * 3600e3);
+    if (h) used.add(h);
+  });
+  return used;
+}
+const covered = (acc, d, h) => coveredSet(acc, d).has(h);
 // Blip : envoi des carrousels sur l'appareil du compte, téléphone ou tablette (absent sur Mac / sans Blip)
 const devOf = c => (PL?.blip?.appareils || {})[c?.compte] || 'iPhone';
 const sentOf = c => c && PL?.blip?.envois?.[c.cle];
@@ -1153,14 +1165,17 @@ function renderPlanning() {
     days.forEach(d => {
       const items = [];
       postsOf(acc, d).forEach(p => items.push({ t: p.poste_le.slice(11, 16), html: `<div class="chip done" title="${esc(p.nom || p.description || '')}"><b>✓ ${esc(p.poste_le.slice(11, 16))}</b><span>${esc(pName(p))} · ${short(p.vues)}</span></div>` }));
-      const hours = [...new Set([...(d < ((PL.debuts || {})[acc] || '') ? [] : PL.creneaux[acc] || []), ...(PL.plan || []).filter(x => x.compte === acc && x.date === d).map(x => x.heure)])].sort();
-      hours.forEach(hh => {
+      const done = coveredSet(acc, d);
+      slotHours(acc, d).forEach(hh => {
         const x = planAt(acc, d, hh), c = x && carOf(x.carrousel);
         if (x) {
-          const warn = !c || c.etat === 'a_fabriquer' || toeicWarn(c);
-          const why = !c ? 'carrousel introuvable' : c.etat === 'a_fabriquer' ? 'pas encore fabriqué' : toeicWarn(c) ? 'TOEIC : déconseillé sur ce compte' : 'prêt';
-          items.push({ t: hh, html: `<div class="chip plan${warn ? ' warn' : ''}" title="${esc((c?.titre || x.carrousel) + ' · ' + why)}">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : ''}<b>${esc(hh)}</b><span>${esc(carLabel(c))}${c?.etat === 'a_fabriquer' ? ' · à fabriquer' : ''}</span>${d >= today ? phoneBtn(c, true) : ''}<button type="button" class="x" data-del="${esc(acc)}|${d}|${hh}" aria-label="Retirer du planning">×</button></div>` });
-        } else if (slotTime(d, hh) > now && !covered(acc, d, hh)) {
+          // créneau passé aujourd'hui, carrousel pas encore vu sur TikTok : il peut encore sortir dans la journée
+          const late = c?.etat === 'pret' && slotTime(d, hh) < now;
+          const warn = !c || c.etat === 'a_fabriquer' || toeicWarn(c) || late;
+          const why = !c ? 'carrousel introuvable' : c.etat === 'a_fabriquer' ? 'pas encore fabriqué' : toeicWarn(c) ? 'TOEIC : déconseillé sur ce compte'
+            : late ? `prévu à ${hh}, pas encore vu sur TikTok. Posté ? Clique sur ↻ Actualiser. Sinon, il revient dans la liste à poster demain` : 'prêt';
+          items.push({ t: hh, html: `<div class="chip plan${warn ? ' warn' : ''}" title="${esc((c?.titre || x.carrousel) + ' · ' + why)}">${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : ''}<b>${late ? '⏰ ' : ''}${esc(hh)}</b><span>${esc(carLabel(c))}${c?.etat === 'a_fabriquer' ? ' · à fabriquer' : late ? ' · en retard' : ''}</span>${d >= today ? phoneBtn(c, true) : ''}<button type="button" class="x" data-del="${esc(acc)}|${d}|${hh}" aria-label="Retirer du planning">×</button></div>` });
+        } else if (slotTime(d, hh) > now && !done.has(hh)) {
           items.push({ t: hh, html: `<button type="button" class="slot" data-slot="${esc(acc)}|${d}|${hh}">+ ${esc(hh)}</button>` });
         }
       });
@@ -1178,7 +1193,9 @@ function renderPlanning() {
   $('stock').innerHTML = todo.length ? todo.map(c => {
     const x = (PL.plan || []).find(p => p.carrousel === c.cle);
     const tags = (c.etat === 'pret' ? `<span class="tag ok">Prêt · ${c.slides} slides</span>` : '<span class="tag todo">Prompt écrit, à fabriquer</span>') +
-      (x ? `<span class="tag pen">Prévu ${esc(dShort(x.date))} à ${esc(x.heure.replace(':', 'h'))}</span>` : '<span class="tag todo">Pas encore placé</span>') +
+      (x ? `<span class="tag pen">Prévu ${esc(dShort(x.date))} à ${esc(x.heure.replace(':', 'h'))}</span>`
+        : (PL.rates?.[c.cle] ? `<span class="tag warn" title="Son créneau est passé sans post : il est revenu ici, à replacer">Pas posté ${esc(dShort(PL.rates[c.cle].slice(0, 10)))} à ${esc(PL.rates[c.cle].slice(11, 16).replace(':', 'h'))}</span>` : '') +
+          '<span class="tag todo">Pas encore placé</span>') +
       (toeicWarn(c) ? '<span class="tag warn" title="Le 23/11, les posts TOEIC du compte ont été montrés à des Français">TOEIC : déconseillé ici</span>' : '') +
       phoneBtn(c, false);
     return `<div class="scard"><button type="button" class="hide" data-hide="${esc(c.cle)}" title="Retirer de la liste (posté ailleurs, donné à un ami, abandonné…)" aria-label="Retirer ${esc(carLabel(c))} de la liste">×</button>${thumb(c) ? `<img src="${thumb(c)}" alt="" loading="lazy">` : '<div class="ph">À fabriquer</div>'}<div style="min-width:0"><b><span style="color:${accCol(c.compte)}">●</span> ${esc(carLabel(c))}</b><p title="${esc(c.titre)}">${esc(c.titre)}</p>${tags}</div></div>`;
@@ -1221,12 +1238,13 @@ async function planPost(body) {
 }
 
 // « Actualiser » : relit dossiers + planning, et relève vite sur TikTok (2 derniers posts, sans les stats
-// du compte) les comptes qui ont un post prévu maintenant ou déjà passé, pour voir s'il est sorti.
+// du compte) chaque compte qui a un carrousel prêt, placé ou non : tu peux l'avoir posté en avance, en
+// retard ou sans l'avoir placé, l'outil doit le voir quand même.
 $('planRefresh').onclick = async () => {
   const b = $('planRefresh'); b.disabled = true;
   plText = null; await loadPlanning();
-  const lim = new Date(Date.now() + 60 * 60e3);
-  const due = [...new Set((PL?.plan || []).filter(x => slotTime(x.date, x.heure) <= lim && carOf(x.carrousel)?.etat === 'pret').map(x => x.compte))];
+  const ready = new Set((PL?.carrousels || []).filter(c => c.etat === 'pret').map(c => c.compte));
+  const due = (PL?.comptes || []).map(c => c.id).filter(id => ready.has(id));
   if (!due.length) { b.disabled = false; toast('Planning à jour ✓', 2000); return; }
   b.innerHTML = `<span class="spin"></span> Relevé ${esc(due.map(accShort).join(' + '))}…`;
   const r = await fetch('/api/refresh', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ n: 2, compte: false, account: due.join(',') }) });
